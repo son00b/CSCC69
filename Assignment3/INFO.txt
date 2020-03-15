@@ -1,0 +1,21 @@
+Name: Aditi Damle
+Utorid:
+
+Name: Heng Liu
+Utorid:
+
+Name: Ya-Tzu Wang
+Utorid: wangyatz
+
+-- delete below later, from course handout:
+
+feel free to describe problems you've encountered,
+what isn't fully implemented (or doesn't work fully),
+any special design decisions you've taken, etc.
+
+Feel free to explain what is not implemented
+and describes what features you have completed.
+You may receive partial credit for functionality that is implemented
+but that does not complete one of the five required programs successfully.
+
+-- delete above later
