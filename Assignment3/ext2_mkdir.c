@@ -26,5 +26,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
+    char* name = argv[1];
+    char* path = argv[2];
+
     return 0;
 }
