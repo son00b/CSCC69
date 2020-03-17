@@ -10,9 +10,11 @@
 unsigned char *disk;
 
 
+
 unsigned char* saveImage  {
 
     // copied from readimage.c
+    // except this time return the disk
 
     if(argc != 2) {
         fprintf(stderr, "Usage: readimg <image file name>\n");
@@ -27,5 +29,6 @@ unsigned char* saveImage  {
     } else{
         return disk
     }
-
 }
+
+

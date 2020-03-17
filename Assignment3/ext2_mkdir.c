@@ -26,8 +26,19 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
-    char* name = argv[1];
-    char* path = argv[2];
+    // name of disk
+    char *name = argv[1];
+    // path of disk
+    char *path = argv[2];
+    // the disk
+    unsigned char *disk = saveImage(name);
+
+    // get the parent inode
+
+    // check if dir exists
+
+    // if not, mkdir
+
 
     return 0;
 }
