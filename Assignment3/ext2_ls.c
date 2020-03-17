@@ -44,12 +44,12 @@ int main(int argc, char *argv[]) {
     // Index to the group descriptor, cast to the required struct
     struct   ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
     // Get the attributes needed
-    unsigned int block_bitmap = bgd->bg_block_bitmap);
-    unsigned int inode_bitmap = bgd->bg_inode_bitmap);
-    unsigned int inode_table = bgd->bg_inode_table);
-    unsigned short free_blocks_count = bgd->bg_free_blocks_count);
-    unsigned short free_inodes_count = bgd->bg_free_inodes_count);
-    unsigned short used_dirs_count = bgd->bg_used_dirs_count);
+    unsigned int block_bitmap = bgd->bg_block_bitmap;
+    unsigned int inode_bitmap = bgd->bg_inode_bitmap;
+    unsigned int inode_table = bgd->bg_inode_table;
+    unsigned short free_blocks_count = bgd->bg_free_blocks_count;
+    unsigned short free_inodes_count = bgd->bg_free_inodes_count;
+    unsigned short used_dirs_count = bgd->bg_used_dirs_count;
 
     // Get inode bitmap
     char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
 	unsigned int size = in->i_size; // Size in bytes 
     unsigned int block = in->i_block; //Pointers to blocks
 
-    // if given path is file, print just the file
+    // if given path is file, print just the file   
 
     // else if given path is a directory, print all contents
 
