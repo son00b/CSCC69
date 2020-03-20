@@ -25,6 +25,9 @@ and refrain from printing the . and ..
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <libgen.h>
+
+void print_in_block()
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_ls disk_name path_to_disk [-a]\n";
@@ -33,11 +36,11 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
     // name of disk
-    char *name = argv[1];
+    char *disk_name = argv[1];
     // path of disk
-    char *path = argv[2];
+    char *disk_path = argv[2];
     // the disk
-    unsigned char *disk = saveImage(name);
+    unsigned char *disk = saveImage(disk_name);
 
     // check if absolute path & exists, if not return err
 
@@ -59,11 +62,22 @@ int main(int argc, char *argv[]) {
     unsigned short mode = in->i_mode; // file mode
 	unsigned short uid = in->i_uid; // Low 16 bits of Owner Uid
 	unsigned int size = in->i_size; // Size in bytes 
-    unsigned int block = in->i_block; //Pointers to blocks
+    unsigned int *block = in->i_block; //Pointers to blocks
+    unsigned int blocks = in->blocks; // Blocks count IN DISK SECTORS
 
-    // if given path is file, print just the file   
-
-    // else if given path is a directory, print all contents
-
+    // if given path is file or link, print just the file   
+    if (mode & EXT2_S_IFREG || mode & EXT2_S_IFLNK ) {
+        // check if file/link exists, if so print
+        printf("%s", basename(disk_path));
+    } 
+    // if given path is a directory, print everything in the directory
+    else if (mode & EXT2_S_IFDIR  ) {
+        int i = 0;
+        // loop through all the blocks
+        while (i < 15){
+            ext2_dir_entry_2 *cur_dir = (struct ext2_dir_entry_2*) (block[i] * EXT2_BLOCK_SIZE);
+            printf("%s", cur_dir->name);
+            i++;
+        }
     return 0;
 }
