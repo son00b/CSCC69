@@ -72,12 +72,19 @@ int main(int argc, char *argv[]) {
     } 
     // if given path is a directory, print everything in the directory
     else if (mode & EXT2_S_IFDIR) {
-        int i = 0;
-        // loop through all the blocks
-        while (i < blocks){
-            ext2_dir_entry_2 *cur_dir = (struct ext2_dir_entry_2*) (block[i] * EXT2_BLOCK_SIZE);
-            printf("%s", cur_dir->name);
-            i++;
-        }
+        unsigned long pos = (unsigned long) disk + block * EXT2_BLOCK_SIZE;
+        ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        do {
+            // Get the length of the current block and type
+            int cur_len = dir->rec_len;
+            // Print the current directory entry
+            printf("name: %.*s\n", dir->name);
+            // Update position and index into it
+            pos = pos + cur_len;
+            dir = (struct ext2_dir_entry_2 *) pos;
+
+            // Last directory entry leads to the end of block. Check if 
+            // Position is multiple of block size, means we have reached the end
+        } while (pos % EXT2_BLOCK_SIZE != 0);
     return 0;
 }
