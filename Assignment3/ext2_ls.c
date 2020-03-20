@@ -71,10 +71,10 @@ int main(int argc, char *argv[]) {
         printf("%s", basename(disk_path));
     } 
     // if given path is a directory, print everything in the directory
-    else if (mode & EXT2_S_IFDIR  ) {
+    else if (mode & EXT2_S_IFDIR) {
         int i = 0;
         // loop through all the blocks
-        while (i < 15){
+        while (i < blocks){
             ext2_dir_entry_2 *cur_dir = (struct ext2_dir_entry_2*) (block[i] * EXT2_BLOCK_SIZE);
             printf("%s", cur_dir->name);
             i++;
