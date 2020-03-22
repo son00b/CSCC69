@@ -1,4 +1,4 @@
-all: ext2_ls ext2_cp ext2_mkdir ext2_ln ext2_rm ext2_rm_bonus
+all: ext2_ls ext2_cp ext2_mkdir ext2_ln ext2_rm ext2_rm_bonus readImage
 
 %.o : %.c ext2.h
 	gcc -Wall -g -c $<
@@ -21,5 +21,8 @@ ext2_rm : ext2_rm.o
 ext2_rm_bonus : ext2_rm_bonus.o
 	gcc -Wall -g -o $@ $^
 
+readImage : readImage.o
+	gcc -Wall -g -o $@ $^
+
 clean :
-	rm -f *.o ext2_ls ext2_cp ext2_mkdir ext2_ln ext2_rm ext2_rm_bonus
+	rm -f *.o ext2_ls ext2_cp ext2_mkdir ext2_ln ext2_rm ext2_rm_bonus readImage

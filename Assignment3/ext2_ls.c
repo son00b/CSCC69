@@ -31,6 +31,7 @@ and refrain from printing the . and ..
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_ls disk_name path_to_disk [-a]\n";
+    
     if (argc != 3 && argc != 4) {
         fprintf(stderr, "%s", err_message);
         exit(1);
@@ -41,16 +42,19 @@ int main(int argc, char *argv[]) {
     char *disk_path = argv[2];
     // the disk
     unsigned char *disk = saveImage(disk_name);
-
+    fprintf(stderr, "%s", disk);
 
     // Index to the group descriptor, cast to the required struct
-    struct   ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+
+    fprintf(stderr, "%s", "disk");
     // Get the attributes needed
     unsigned int inode_table = bgd->bg_inode_table;
     // get inode
     struct ext2_inode* in = (struct ext2_inode*) (disk + inode_table * EXT2_BLOCK_SIZE);
     // get the attributes needed
     unsigned short mode = in->i_mode; // file mode
+    fprintf(stderr, "%d", mode);
     unsigned int *block = in->i_block; //Pointers to blocks
 
     // if given path is file or link, print just the file   
@@ -60,6 +64,7 @@ int main(int argc, char *argv[]) {
     } 
     // if given path is a directory, print everything in the directory
     else if (mode & EXT2_S_IFDIR) {
+        fprintf(stderr, "%s", "asd");
         unsigned long pos = (unsigned long) disk + (int) *block * EXT2_BLOCK_SIZE;
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         do {
@@ -75,5 +80,6 @@ int main(int argc, char *argv[]) {
             // Position is multiple of block size, means we have reached the end
         } while (pos % EXT2_BLOCK_SIZE != 0);
     }
+    
     return 0;
 }
