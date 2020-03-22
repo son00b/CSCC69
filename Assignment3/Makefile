@@ -1,7 +1,7 @@
 all: ext2_ls ext2_cp ext2_mkdir ext2_ln ext2_rm ext2_rm_bonus
 
 %.o : %.c ext2.h
-	gcc -Wall -o -c $<
+	gcc -Wall -o -g -c $<
 
 ext2_ls : ext2_ls.o
 	gcc -Wall -o $@ $^
