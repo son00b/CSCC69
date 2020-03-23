@@ -129,9 +129,9 @@ int main(int argc, char *argv[]) {
                 int cur_len = dir->rec_len;
 
                 // if we found the file in path
-                if (strlen(name) == strlen(cur) && strncmp(name, cur, strlen(cur)) == 0){
+                if (sizeof(name) == sizeof(cur) && strncmp(name, cur, strlen(cur)) == 0){
                     // if this file is the last item in path
-                    if (strlen(name) == strlen(filename) && strncmp(name, filename, strlen(filename)) == 0){
+                    if (sizeof(name) == sizeof(filename) && strncmp(name, filename, strlen(filename)) == 0){
                         // if the last item is file or link, Print
                         if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                             printf("%.*s\n", dir->name_len, dir->name);
