@@ -61,8 +61,8 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128]){
         }
 }
 
-void cd(){
-    return 0;
+void cd(unsigned int inode){
+    
 }
 
 

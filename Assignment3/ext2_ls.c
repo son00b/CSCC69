@@ -113,7 +113,6 @@ int main(int argc, char *argv[]) {
     char *filename = basename(disk_path);
     while( (cur = strsep(&string,"/")) != NULL ){
         // For all the directory blocks
-        unsigned int dir_inode;
         for (int i = 0; i < dirsin; i++) {
             // Get the block number
             int blocknum = dirs[i];
@@ -135,11 +134,17 @@ int main(int argc, char *argv[]) {
                         // if the last item is file or link, Print
                         if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                             printf("%.*s\n", dir->name_len, dir->name);
+                            break;
                         }
                         else if (dir->file_type == EXT2_FT_DIR){
                             ls_block(dir->inode, dirsin, dirs);
+                            break;
                         }
                     } 
+                    // if not, cd into the path
+                    else {
+                        cd(dir->inode);
+                    }
                 }
                 
                 
