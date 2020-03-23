@@ -48,23 +48,9 @@ int main(int argc, char *argv[]) {
 
         struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
 
-
-    /**********************************************************************************/
-    /************************************** TASK 1 ************************************/
-    /**********************************************************************************/
-
-
     // Index to the group descriptor, cast to the required struct
     struct   ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
 
-
-    
-    /**********************************************************************************/
-    /************************************** TASK 2 ************************************/
-    /**********************************************************************************/
-
-
-    
     /******************************* Block Bitmap *************************************/
 
     // counter for shift
@@ -97,11 +83,6 @@ int main(int argc, char *argv[]) {
     }
     struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
 
-
-
-    /******************************* Print Inodes *************************************/
-
-
     /**** The following array is used to keep track of directories ****/
     int dirs[128];
     int dirsin = 0;
@@ -132,29 +113,41 @@ int main(int argc, char *argv[]) {
     char *filename = basename(disk_path);
     while( (cur = strsep(&string,"/")) != NULL ){
         // For all the directory blocks
+        unsigned int dir_inode;
         for (int i = 0; i < dirsin; i++) {
             // Get the block number
             int blocknum = dirs[i];
             // Get the position in bytes and index to block
             unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
             struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-
+            
             do {
-                char *name = dir->name;
+                
+                // printf("%u\n", dir_inode);
+                char *name = dir->name; 
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
+                
+                int max1 = strlen(name);
+                int max2 = strlen(name);
+                if (strlen(cur)> strlen(name)){
+                    max1 = strlen(cur);
+                }
+                if (strlen(filename) > strlen(name)){
+                    max2 = strlen(filename);
+                }
                 // if we found the file in path
-                if (strncmp(name, cur, strlen(cur)) == 0){
+                if (strncmp(name, cur, max1) == 0){
                     // if this file is the last item in path
-                    if (strncmp(name, filename, strlen(filename)) == 0){
-                        // Print
-                        if (dir->file_type == EXT2_FT_REG_FILE)
-                        printf("%.*s\n", dir->name_len, dir->name);
+                    if (strncmp(name, filename, max2) == 0){
+                        // if the last item is file or link, Print
+                        if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
+                            printf("%.*s\n", dir->name_len, dir->name);
+                        }
+                        else if (dir->file_type == EXT2_FT_DIR){
+                            ls_block(dir->inode, dirsin, dirs);
+                        }
                     } 
-                    // if not, cd into directory
-                    else {
-
-                    }
                 }
                 
                 
@@ -168,11 +161,6 @@ int main(int argc, char *argv[]) {
         }
 
     }
-        
 
-
-   
-    
-    
     return 0;
 }
