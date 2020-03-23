@@ -127,19 +127,11 @@ int main(int argc, char *argv[]) {
                 char *name = dir->name; 
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
-                
-                int max1 = strlen(name);
-                int max2 = strlen(name);
-                if (strlen(cur)> strlen(name)){
-                    max1 = strlen(cur);
-                }
-                if (strlen(filename) > strlen(name)){
-                    max2 = strlen(filename);
-                }
+
                 // if we found the file in path
-                if (strncmp(name, cur, max1) == 0){
+                if (strlen(name) == strlen(cur) && strncmp(name, cur, strlen(cur)) == 0){
                     // if this file is the last item in path
-                    if (strncmp(name, filename, max2) == 0){
+                    if (strlen(name) == strlen(filename) && strncmp(name, filename, strlen(filename)) == 0){
                         // if the last item is file or link, Print
                         if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                             printf("%.*s\n", dir->name_len, dir->name);
