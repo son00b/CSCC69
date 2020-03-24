@@ -134,59 +134,68 @@ int main(int argc, char *argv[]) {
     // skip root directory
     char *cur = strsep(&string,"/");
     cur = strsep(&string,"/");
-    char *filename = basename(disk_path);
-    while(cur && strcmp(cur, "") != 0){
-        // For all the directory blocks
-        for (int i = 0; i < dirsin; i++) {
-            // Get the block number
-            int blocknum = dirs[i];
-            // Get the position in bytes and index to block
-            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-            
-            do {
+    // if given path is root directory
+    if (strcmp(cur, "") == 0){
+        printf("%s", "asd");
+    } 
+    
+    else{
+        char *filename = basename(disk_path);
+        while(cur && strcmp(cur, "") != 0){
+            // For all the directory blocks
+            for (int i = 0; i < dirsin; i++) {
+                // Get the block number
+                int blocknum = dirs[i];
+                // Get the position in bytes and index to block
+                unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+                struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
                 
-                // printf("%u\n", dir_inode);
-                char *name = dir->name; 
-                // Get the length of the current block and type
-                int cur_len = dir->rec_len;
-                // if we found the file in path
-                if (strncmp(name, cur, dir->name_len) == 0){
-                    // if this file is the last item in path
-                    if (strncmp(name, filename, dir->name_len) == 0){
-                        // if the last item is file or link, Print
-                        if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
-                            printf("%.*s\n", dir->name_len, dir->name);
-                            return 0;
-                        }
-                        else if (dir->file_type == EXT2_FT_DIR){
-                            ls_block(dir->inode, dirsin, dirs);
-                            return 0;
-                        }
-                    } 
-                    // if not, get the last item in path, and print if exists
-                    else {
-                        unsigned int file_inode = traverse(dir->inode, cur, string, filename, dirsin, dirs);
-                        // if last item exists, return 0 otherwise return enoent
-                        if(file_inode){
-                            return 0;
+                do {
+                    
+                    // printf("%u\n", dir_inode);
+                    char *name = dir->name; 
+                    // Get the length of the current block and type
+                    int cur_len = dir->rec_len;
+                    // if we found the file in path
+                    if (strncmp(name, cur, dir->name_len) == 0){
+                        // if this file is the last item in path
+                        if (strncmp(name, filename, dir->name_len) == 0){
+                            // if the last item is file or link, Print
+                            if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
+                                printf("%.*s\n", dir->name_len, dir->name);
+                                return 0;
+                            }
+                            else if (dir->file_type == EXT2_FT_DIR){
+                                ls_block(dir->inode, dirsin, dirs, aflag);
+                                return 0;
+                            }
                         } 
-                        else{
-                            return ENOENT;
+                        // if not, get the last item in path, and print if exists
+                        else {
+                            unsigned int file_inode = traverse(dir->inode, cur, string, filename, dirsin, dirs, aflag);
+                            // if last item exists, return 0 otherwise return enoent
+                            if(file_inode){
+                                return 0;
+                            } 
+                            else{
+                                return ENOENT;
+                            }
                         }
                     }
-                }
-                
-                
-                // Update position and index into it
-                pos = pos + cur_len;
-                dir = (struct ext2_dir_entry_2 *) pos;
+                    
+                    
+                    // Update position and index into it
+                    pos = pos + cur_len;
+                    dir = (struct ext2_dir_entry_2 *) pos;
 
-                // Last directory entry leads to the end of block. Check if 
-                // Position is multiple of block size, means we have reached the end
-            } while (pos % EXT2_BLOCK_SIZE != 0);
+                    // Last directory entry leads to the end of block. Check if 
+                    // Position is multiple of block size, means we have reached the end
+                } while (pos % EXT2_BLOCK_SIZE != 0);
+            }
+            cur = strsep(&string,"/");
         }
-        cur = strsep(&string,"/");
+        return ENOENT;
     }
-    return ENOENT;
+
+    
 }

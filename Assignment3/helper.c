@@ -27,7 +27,7 @@ unsigned char* saveImage(char *name) {
 }
 
 // print everything in a directory block
-void ls_block(unsigned int inode, int dirsin, int dirs[128]){
+void ls_block(unsigned int inode, int dirsin, int dirs[128], int aflag){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
@@ -41,7 +41,7 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128]){
             int cur_len = dir->rec_len;
             // if we found the file in path
             if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_DIR){
-                if (strcmp(dir->name, ".") != 0 && strcmp(dir->name, "..") != 0){
+                if (strncmp(".", dir->name, strlen(".")) != 0 || aflag == 1){
                     printf("%.*s\n", dir->name_len, dir->name);
                 }
             }
@@ -58,7 +58,7 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128]){
     }
 }
 
-unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, char *filename, int dirsin, int dirs[128]){
+unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, char *filename, int dirsin, int dirs[128], int aflag){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
@@ -78,11 +78,11 @@ unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, cha
                         printf("%.*s\n", dir->name_len, dir->name);
                     }
                     else{
-                        ls_block(dir->inode, dirsin, dirs);
+                        ls_block(dir->inode, dirsin, dirs, aflag);
                     }
                     return dir->inode;
                 }else{
-                    return traverse(dir->inode, next_dir_name, string, filename, dirsin, dirs);
+                    return traverse(dir->inode, next_dir_name, string, filename, dirsin, dirs, aflag);
                 }
             }
             
