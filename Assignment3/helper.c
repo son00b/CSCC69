@@ -56,13 +56,22 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128]){
                 // Last directory entry leads to the end of block. Check if 
                 // Position is multiple of block size, means we have reached the end
             } while (pos % EXT2_BLOCK_SIZE != 0);
-            }
-            
         }
+    }
 }
 
-void cd(unsigned int inode){
-    
+struct ext2_dir_entry_2 *cd(unsigned int inode, int dirsin, int dirs[128]){
+    for (int i = 0; i < dirsin; i++) {
+            // Get the block number
+            int blocknum = dirs[i];
+            // Get the position in bytes and index to block
+            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+            if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+                return dir;
+        }
+    }
+    return NULL;
 }
 
 

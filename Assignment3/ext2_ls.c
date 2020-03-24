@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
                     } 
                     // if not, cd into the path
                     else {
-                        cd(dir->inode);
+                        struct ext2_dir_entry_2 *next_dir = cd(dir->inode, dirsin, dirs);
                     }
                 }
                 
