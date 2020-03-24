@@ -40,22 +40,22 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    int aflag = 0;
+    int aflag = 0; // 1 when "-a" is provided; 0 when "-a" not provided.
     int diskindex = 1;
     int pathindex = 2;
     if (argc == 4) {
         int i;
         for (i = 1; i < argc; i++) {
             if (strncmp(argv[i], "-a", strlen("-a")) == 0) {
-                aflag = 1;
                 if (i == 1) {
-                    diskindex = 2;
-                    pathindex = 3;
+                    fprintf(stderr, "-a should be after the disk image argument.");
                 } else if (i == 2) {
                     pathindex = 3;
                 }
+                aflag = 1;
             }
         }
+        // if there are 3 command line argument, "-a" should be provided.
         if (aflag == 0) {
             fprintf(stderr, "-a should be provided.");
         }
