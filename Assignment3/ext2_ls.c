@@ -151,10 +151,9 @@ int main(int argc, char *argv[]) {
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
                 // if we found the file in path
-                if (sizeof(name) == sizeof(cur) && strncmp(name, cur, strlen(cur)) == 0){
-                     printf("%s %s", name, cur);
+                if (strncmp(name, cur, dir->name_len) == 0){
                     // if this file is the last item in path
-                    if (sizeof(name) == sizeof(filename) && strncmp(name, filename, strlen(filename)) == 0){
+                    if (strncmp(name, filename, dir->name_len) == 0){
                         // if the last item is file or link, Print
                         if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                             printf("%.*s\n", dir->name_len, dir->name);
@@ -165,17 +164,16 @@ int main(int argc, char *argv[]) {
                             return 0;
                         }
                     } 
-                    // if not, cd into the path
+                    // if not, get the last item in path, and print if exists
                     else {
-                        unsigned int next_inode = traverse(dir->inode, cur, filename, dirsin, dirs);
-                        if(next_inode){
-
-                        } else{
-                            printf("%s", "asd1");
+                        unsigned int file_inode = traverse(dir->inode, cur, string, filename, dirsin, dirs);
+                        // if last item exists, return 0 otherwise return enoent
+                        if(file_inode){
+                            return 0;
+                        } 
+                        else{
                             return ENOENT;
                         }
-                        printf("%s", "asd");
-                        return 0;
                     }
                 }
                 

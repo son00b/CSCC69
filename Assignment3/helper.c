@@ -29,37 +29,6 @@ unsigned char* saveImage(char *name) {
 // print everything in a directory block
 void ls_block(unsigned int inode, int dirsin, int dirs[128]){
     for (int i = 0; i < dirsin; i++) {
-            // Get the block number
-            int blocknum = dirs[i];
-            // Get the position in bytes and index to block
-            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-            if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-                do {
-
-                // Get the length of the current block and type
-                int cur_len = dir->rec_len;
-                // if we found the file in path
-                if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_DIR){
-                    if (strcmp(dir->name, ".") != 0 && strcmp(dir->name, "..") != 0){
-                        printf("%.*s\n", dir->name_len, dir->name);
-                    }
-                }
-                
-                
-                // Update position and index into it
-                pos = pos + cur_len;
-                dir = (struct ext2_dir_entry_2 *) pos;
-
-                // Last directory entry leads to the end of block. Check if 
-                // Position is multiple of block size, means we have reached the end
-            } while (pos % EXT2_BLOCK_SIZE != 0);
-        }
-    }
-}
-
-unsigned int traverse(unsigned int inode, char *next_dir_name, char *filename, int dirsin, int dirs[128]){
-    for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
         // Get the position in bytes and index to block
@@ -70,8 +39,8 @@ unsigned int traverse(unsigned int inode, char *next_dir_name, char *filename, i
 
             // Get the length of the current block and type
             int cur_len = dir->rec_len;
-            // if we found the next dir
-            if (dir->file_type == EXT2_FT_DIR && strcmp (next_dir_name, dir->name) == 0){
+            // if we found the file in path
+            if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_DIR){
                 if (strcmp(dir->name, ".") != 0 && strcmp(dir->name, "..") != 0){
                     printf("%.*s\n", dir->name_len, dir->name);
                 }
@@ -82,11 +51,49 @@ unsigned int traverse(unsigned int inode, char *next_dir_name, char *filename, i
             pos = pos + cur_len;
             dir = (struct ext2_dir_entry_2 *) pos;
 
-            return inode;
+            // Last directory entry leads to the end of block. Check if 
+            // Position is multiple of block size, means we have reached the end
+            } while (pos % EXT2_BLOCK_SIZE != 0);
+        }
+    }
+}
+
+unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, char *filename, int dirsin, int dirs[128]){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+            next_dir_name = strsep(&string,"/");
+            do {
+
+            // Get the length of the current block and type
+            int cur_len = dir->rec_len;
+            // if we found the next dir
+            if (strncmp (next_dir_name, dir->name, dir->name_len) == 0){
+                if (strncmp(dir->name, filename, dir->name_len) == 0){
+                    if (dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_REG_FILE){
+                        printf("%.*s\n", dir->name_len, dir->name);
+                    }
+                    else{
+                        ls_block(dir->inode, dirsin, dirs);
+                    }
+                    return dir->inode;
+                }else{
+                    return traverse(dir->inode, next_dir_name, string, filename, dirsin, dirs);
+                }
+            }
+            
+            
+            // Update position and index into it
+            pos = pos + cur_len;
+            dir = (struct ext2_dir_entry_2 *) pos;
             }while (pos % EXT2_BLOCK_SIZE != 0);
         }
     }
-    return inode;
+    return 0;
 }
 
 
