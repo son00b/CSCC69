@@ -67,68 +67,7 @@ int main(int argc, char *argv[]) {
     char *disk_path = argv[pathindex];
     // the disk
     unsigned char *disk = saveImage(disk_name);
-    fprintf(stderr, "%s", disk);
-
-        struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
-
-    // Index to the group descriptor, cast to the required struct
-    struct   ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
-
-    /******************************* Block Bitmap *************************************/
-
-    // counter for shift
-    int index = 0;
-    for (int i = 0; i < sb->s_blocks_count; i++) {
-        if (++index == 8) (index = 0); // increment shift index, if > 8 reset.
-    }
-
-    /******************************* Inode Bitmap *************************************/
-    /************************* + store used inodes ************************************/
-
-    // Get inode bitmap
-    char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
-    // Want to keep track of the used inodes in this array
-    int inum[32];
-    inum[0] = 1;    // Root inode is Inode number 2, index 1
-    // current size of the array
-    int inumc = 1;  // because we stored the first one
-    // counter for shift
-    int index2 = 0;
-    for (int i = 0; i < sb->s_inodes_count; i++) {
-        unsigned c = bmi[i / 8];                     // get the corresponding byte
-        // If that bit was a 1, inode is used, store it into the array.
-        // Note, this is the index number, NOT the inode number
-        // inode number = index number + 1
-        if ((c & (1 << index2)) > 0 && i > 10) {    // > 10 because first 11 not used
-            inum[inumc++] = i;
-        }
-        if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
-    }
-    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
-
-    /**** The following array is used to keep track of directories ****/
-    int dirs[128];
-    int dirsin = 0;
-
-    // Go through all the used inodes stored in the array above
-    for (int i = 0; i < inumc; i++) {
-        // Remember array stores the index
-        struct ext2_inode* curr = in + inum[i];
-        char type = (S_ISDIR(curr->i_mode)) ? 'd' : ((S_ISREG(curr->i_mode)) ? 'f' : 's');
-        // Get the array of blocks from inode
-        unsigned int *arr = curr->i_block;
-        // Loop through and print all value till a 0 is seen in the array
-        while(1) {
-            if (*arr == 0) {
-                break;
-            }
-            // If it's a directory, add to the array.
-            if (type == 'd') {
-                dirs[dirsin++] = *arr;
-            }
-            arr++;
-        }
-    }
+    init();
 
     char *string = strdup(disk_path);
     // skip root directory
@@ -136,11 +75,35 @@ int main(int argc, char *argv[]) {
     cur = strsep(&string,"/");
     // if given path is root directory
     if (strcmp(cur, "") == 0){
-        printf("%s", "asd");
+        // for all the directories
+        for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+            int blocknum = dirs[i];
+            // Get the position in bytes and index to block
+            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+            if (dir->inode == 2 && strcmp(dir->name, ".") == 0){
+                do {
+                // Get the length of the current block and type
+                int cur_len = dir->rec_len;
+                // print all non hidden files and hidden only if specified
+                    if (strncmp(".", dir->name, strlen(".")) != 0 || aflag == 1){
+                        printf("%.*s\n", dir->name_len, dir->name);
+                    }
+                // Update position and index into it
+                pos = pos + cur_len;
+                dir = (struct ext2_dir_entry_2 *) pos;
+
+                // Last directory entry leads to the end of block. Check if 
+                // Position is multiple of block size, means we have reached the end
+                } while (pos % EXT2_BLOCK_SIZE != 0);
+            }
+        }
     } 
-    
+    // if the given path isn't root
     else{
         char *filename = basename(disk_path);
+        // for every item in the path
         while(cur && strcmp(cur, "") != 0){
             // For all the directory blocks
             for (int i = 0; i < dirsin; i++) {
@@ -157,9 +120,9 @@ int main(int argc, char *argv[]) {
                     // Get the length of the current block and type
                     int cur_len = dir->rec_len;
                     // if we found the file in path
-                    if (strncmp(name, cur, dir->name_len) == 0){
+                    if (strncmp(name, cur, dir->name_len) == 0 && strlen(cur) == dir->name_len){
                         // if this file is the last item in path
-                        if (strncmp(name, filename, dir->name_len) == 0){
+                        if (strncmp(name, filename, dir->name_len) == 0 && strlen(filename) == dir->name_len){
                             // if the last item is file or link, Print
                             if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                                 printf("%.*s\n", dir->name_len, dir->name);
