@@ -53,9 +53,6 @@ void init(){
         if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
     }
     struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
-
-    
-
     // Go through all the used inodes stored in the array above
     for (int i = 0; i < inumc; i++) {
         // Remember array stores the index
@@ -88,7 +85,6 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128], int aflag){
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         if (inode == dir->inode && strcmp(dir->name, ".") == 0){
             do {
-
             // Get the length of the current block and type
             int cur_len = dir->rec_len;
             // if file is regula file, link, or directory then print
@@ -98,12 +94,9 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128], int aflag){
                     printf("%.*s\n", dir->name_len, dir->name);
                 }
             }
-            
-            
             // Update position and index into it
             pos = pos + cur_len;
             dir = (struct ext2_dir_entry_2 *) pos;
-
             // Last directory entry leads to the end of block. Check if 
             // Position is multiple of block size, means we have reached the end
             } while (pos % EXT2_BLOCK_SIZE != 0);
@@ -121,7 +114,6 @@ unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, cha
         if (inode == dir->inode && strcmp(dir->name, ".") == 0){
             next_dir_name = strsep(&string,"/");
             do {
-
             // Get the length of the current block and type
             int cur_len = dir->rec_len;
             // if we found the next dir
