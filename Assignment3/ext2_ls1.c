@@ -27,7 +27,6 @@ and refrain from printing the . and ..
 #include <stdlib.h>
 #include <libgen.h>
 #include <string.h>
-#include <errno.h>
 
 #include "ext2.h"
 #include "helper.c"
@@ -39,32 +38,10 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
-
-    int aflag = 0;
-    int diskindex = 1;
-    int pathindex = 2;
-    if (argc == 4) {
-        int i;
-        for (i = 1; i < argc; i++) {
-            if (strncmp(argv[i], "-a", strlen("-a")) == 0) {
-                aflag = 1;
-                if (i == 1) {
-                    diskindex = 2;
-                    pathindex = 3;
-                } else if (i == 2) {
-                    pathindex = 3;
-                }
-            }
-        }
-        if (aflag == 0) {
-            fprintf(stderr, "-a should be provided.");
-        }
-    }
-
     // name of disk
-    char *disk_name = argv[diskindex];
+    char *disk_name = argv[1];
     // path of disk
-    char *disk_path = argv[pathindex];
+    char *disk_path = argv[2];
     // the disk
     unsigned char *disk = saveImage(disk_name);
     fprintf(stderr, "%s", disk);
@@ -133,9 +110,8 @@ int main(int argc, char *argv[]) {
     char *string = strdup(disk_path);
     // skip root directory
     char *cur = strsep(&string,"/");
-    cur = strsep(&string,"/");
     char *filename = basename(disk_path);
-    while(cur && strcmp(cur, "") != 0){
+    while( (cur = strsep(&string,"/")) != NULL ){
         // For all the directory blocks
         for (int i = 0; i < dirsin; i++) {
             // Get the block number
@@ -150,32 +126,25 @@ int main(int argc, char *argv[]) {
                 char *name = dir->name; 
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
+
                 // if we found the file in path
                 if (sizeof(name) == sizeof(cur) && strncmp(name, cur, strlen(cur)) == 0){
-                     printf("%s %s", name, cur);
                     // if this file is the last item in path
                     if (sizeof(name) == sizeof(filename) && strncmp(name, filename, strlen(filename)) == 0){
                         // if the last item is file or link, Print
                         if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                             printf("%.*s\n", dir->name_len, dir->name);
-                            return 0;
+                            break;
                         }
                         else if (dir->file_type == EXT2_FT_DIR){
                             ls_block(dir->inode, dirsin, dirs);
-                            return 0;
+                            break;
                         }
                     } 
                     // if not, cd into the path
                     else {
-                        unsigned int next_inode = traverse(dir->inode, cur, filename, dirsin, dirs);
-                        if(next_inode){
-
-                        } else{
-                            printf("%s", "asd1");
-                            return ENOENT;
-                        }
-                        printf("%s", "asd");
-                        return 0;
+                        struct ext2_dir_entry_2 *next_dir = cd(dir->inode, dirsin, dirs);
+                        
                     }
                 }
                 
@@ -188,7 +157,8 @@ int main(int argc, char *argv[]) {
                 // Position is multiple of block size, means we have reached the end
             } while (pos % EXT2_BLOCK_SIZE != 0);
         }
-        cur = strsep(&string,"/");
+
     }
-    return ENOENT;
+
+    return 0;
 }

@@ -36,9 +36,7 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128]){
             struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
             if (inode == dir->inode && strcmp(dir->name, ".") == 0){
                 do {
-                
-                // printf("%u\n", dir_inode);
-                char *name = dir->name; 
+
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
                 // if we found the file in path
@@ -60,18 +58,35 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128]){
     }
 }
 
-struct ext2_dir_entry_2 *cd(unsigned int inode, int dirsin, int dirs[128]){
+unsigned int traverse(unsigned int inode, char *next_dir_name, char *filename, int dirsin, int dirs[128]){
     for (int i = 0; i < dirsin; i++) {
-            // Get the block number
-            int blocknum = dirs[i];
-            // Get the position in bytes and index to block
-            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-            if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-                return dir;
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+            do {
+
+            // Get the length of the current block and type
+            int cur_len = dir->rec_len;
+            // if we found the next dir
+            if (dir->file_type == EXT2_FT_DIR && strcmp (next_dir_name, dir->name) == 0){
+                if (strcmp(dir->name, ".") != 0 && strcmp(dir->name, "..") != 0){
+                    printf("%.*s\n", dir->name_len, dir->name);
+                }
+            }
+            
+            
+            // Update position and index into it
+            pos = pos + cur_len;
+            dir = (struct ext2_dir_entry_2 *) pos;
+
+            return inode;
+            }while (pos % EXT2_BLOCK_SIZE != 0);
         }
     }
-    return NULL;
+    return inode;
 }
 
 
