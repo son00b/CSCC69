@@ -38,10 +38,32 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
+
+    int aflag = 0;
+    int diskindex = 1;
+    int pathindex = 2;
+    if (argc == 4) {
+        int i;
+        for (i = 1; i < argc; i++) {
+            if (strncmp(argv[i], "-a", strlen("-a")) == 0) {
+                aflag = 1;
+                if (i == 1) {
+                    diskindex = 2;
+                    pathindex = 3;
+                } else if (i == 2) {
+                    pathindex = 3;
+                }
+            }
+        }
+        if (aflag == 0) {
+            fprintf(stderr, "-a should be provided.");
+        }
+    }
+
     // name of disk
-    char *disk_name = argv[1];
+    char *disk_name = argv[diskindex];
     // path of disk
-    char *disk_path = argv[2];
+    char *disk_path = argv[pathindex];
     // the disk
     unsigned char *disk = saveImage(disk_name);
     fprintf(stderr, "%s", disk);
