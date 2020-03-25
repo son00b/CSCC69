@@ -64,18 +64,16 @@ int main(int argc, char *argv[]) {
 
     // name of disk
     char *disk_name = argv[diskindex];
-    // path of disk
-    char *disk_path = argv[pathindex];
+    // path of file in disk
+    char path[strlen(argv[pathindex])];
+    strcpy(path, argv[pathindex]);
     // the disk
     unsigned char *disk = saveImage(disk_name);
     init();
-
-    char *string = strdup(disk_path);
-    // skip root directory
-    char *cur = strsep(&string,"/");
-    cur = strsep(&string,"/");
+    
+    // cur = strtok(NULL, "/");
     // if given path is root directory
-    if (strcmp(cur, "") == 0){
+    if (strcmp(path, "/") == 0){
         // for all the directories
         for (int i = 0; i < dirsin; i++) {
         // Get the block number
@@ -103,9 +101,13 @@ int main(int argc, char *argv[]) {
     } 
     // if the given path isn't root
     else{
-        char *filename = basename(disk_path);
+        // get the file name
+        char *filename = basename(path);
+        // skip root directory
+        char *cur = strtok(path, "/");
+        
         // for every item in the path
-        while(cur && strcmp(cur, "") != 0){
+        while(cur){
             // For all the directory blocks
             for (int i = 0; i < dirsin; i++) {
                 // Get the block number
@@ -115,8 +117,6 @@ int main(int argc, char *argv[]) {
                 struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
                 
                 do {
-                    
-                    // printf("%u\n", dir_inode);
                     char *name = dir->name; 
                     // Get the length of the current block and type
                     int cur_len = dir->rec_len;
@@ -130,15 +130,25 @@ int main(int argc, char *argv[]) {
                                 return 0;
                             }
                             else if (dir->file_type == EXT2_FT_DIR){
-                                ls_block(dir->inode, dirsin, dirs, aflag);
+                                ls_block(dir->inode, aflag);
                                 return 0;
                             }
                         } 
                         // if not, get the last item in path, and print if exists
                         else {
-                            unsigned int file_inode = traverse(dir->inode, cur, string, filename, dirsin, dirs, aflag);
-                            // if last item exists, return 0 otherwise return enoent
+                            unsigned int file_inode = traverse(dir->inode, cur, filename);
+                            // if last item exists in path
                             if(file_inode){
+                                // get the item as directory entry
+                                struct ext2_dir_entry_2 *dir_file = find_dir_entry(file_inode, filename);
+                                // print the name if it's file or link 
+                                if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
+                                    printf("%.*s\n", dir_file->name_len, dir_file->name);
+                                }
+                                // print everything in directory if it's a directory, also print hidden files if -a specified
+                                else{
+                                    ls_block(file_inode, aflag);
+                                }
                                 return 0;
                             } 
                             else{
@@ -146,8 +156,6 @@ int main(int argc, char *argv[]) {
                             }
                         }
                     }
-                    
-                    
                     // Update position and index into it
                     pos = pos + cur_len;
                     dir = (struct ext2_dir_entry_2 *) pos;
@@ -156,7 +164,7 @@ int main(int argc, char *argv[]) {
                     // Position is multiple of block size, means we have reached the end
                 } while (pos % EXT2_BLOCK_SIZE != 0);
             }
-            cur = strsep(&string,"/");
+            cur = strtok(NULL, "/");
         }
         return ENOENT;
     }

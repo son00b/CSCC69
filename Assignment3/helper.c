@@ -9,8 +9,8 @@
 
 unsigned char *disk;
 /**** The following array is used to keep track of directories ****/
-    int dirs[128];
-    int dirsin = 0;
+int dirs[128];
+int dirsin = 0;
 
 unsigned char* saveImage(char *name) {
     
@@ -76,7 +76,7 @@ void init(){
 }
 
 // print everything in a directory block
-void ls_block(unsigned int inode, int dirsin, int dirs[128], int aflag){
+void ls_block(unsigned int inode, int aflag){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
@@ -104,7 +104,51 @@ void ls_block(unsigned int inode, int dirsin, int dirs[128], int aflag){
     }
 }
 
-unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, char *filename, int dirsin, int dirs[128], int aflag){
+unsigned long find_file_pos(unsigned int inode, char* filename){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        do {
+        // Get the length of the current block and type
+        int cur_len = dir->rec_len;
+        // if we found the next dir
+        if (strncmp (filename, dir->name, dir->name_len) == 0 && strlen(filename) == dir->name_len){
+            return pos;
+        }
+        // Update position and index into it
+        pos = pos + cur_len;
+        dir = (struct ext2_dir_entry_2 *) pos;
+        }while (pos % EXT2_BLOCK_SIZE != 0);
+    }
+    return 0;
+}
+
+struct ext2_dir_entry_2 *find_dir_entry(unsigned int inode, char *filename){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        do {
+        // Get the length of the current block and type
+        int cur_len = dir->rec_len;
+        // if we found the next dir
+        if (strncmp (filename, dir->name, dir->name_len) == 0 && strlen(filename) == dir->name_len){
+            return dir;
+        }
+        // Update position and index into it
+        pos = pos + cur_len;
+        dir = (struct ext2_dir_entry_2 *) pos;
+        }while (pos % EXT2_BLOCK_SIZE != 0);
+    }
+    return NULL;
+}
+
+unsigned int traverse(unsigned int inode, char *cur, char *filename){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
@@ -112,22 +156,16 @@ unsigned int traverse(unsigned int inode, char *next_dir_name, char *string, cha
         unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-            next_dir_name = strsep(&string,"/");
+            cur = strtok(NULL, "/");
             do {
             // Get the length of the current block and type
             int cur_len = dir->rec_len;
             // if we found the next dir
-            if (strncmp (next_dir_name, dir->name, dir->name_len) == 0 && strlen(next_dir_name) == dir->name_len){
+            if (strncmp (cur, dir->name, dir->name_len) == 0 && strlen(cur) == dir->name_len){
                 if (strncmp(dir->name, filename, dir->name_len) == 0 && strlen(filename) == dir->name_len){
-                    if (dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_REG_FILE){
-                        printf("%.*s\n", dir->name_len, dir->name);
-                    }
-                    else{
-                        ls_block(dir->inode, dirsin, dirs, aflag);
-                    }
                     return dir->inode;
                 }else{
-                    return traverse(dir->inode, next_dir_name, string, filename, dirsin, dirs, aflag);
+                    return traverse(dir->inode, cur, filename);
                 }
             }
             
