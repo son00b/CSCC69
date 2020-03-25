@@ -48,7 +48,8 @@ int main(int argc, char *argv[]) {
         for (i = 1; i < argc; i++) {
             if (strncmp(argv[i], "-a", strlen("-a")) == 0) {
                 if (i == 1) {
-                    fprintf(stderr, "-a should be after the disk image argument.");
+                    fprintf(stderr, "-a should be after the disk image argument \n");
+                    exit(1);
                 } else if (i == 2) {
                     pathindex = 3;
                 }
