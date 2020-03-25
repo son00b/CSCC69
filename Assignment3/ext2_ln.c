@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
     }
 
     int sflag = 0; // 1 when "-s" is provided; 0 when "-s" not provided.
+    int diskindex = 1, pathindexA = 2, pathindexB = 3;
     if (argc == 5) {
         int i;
         for (i = 1; i < argc; i++) {
