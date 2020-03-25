@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
         // if there are 3 command line argument, "-a" should be provided.
         if (aflag == 0) {
             fprintf(stderr, "-a should be provided.");
+            exit(1);
         }
     }
 
