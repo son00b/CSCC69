@@ -104,23 +104,25 @@ void ls_block(unsigned int inode, int aflag){
     }
 }
 
-unsigned long find_file_pos(unsigned int inode, char* filename){
+unsigned long find_pre_pos(unsigned int inode, char* filename){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
         // Get the position in bytes and index to block
         unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        unsigned long pre_pos = pos;
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         do {
-        // Get the length of the current block and type
-        int cur_len = dir->rec_len;
-        // if we found the next dir
-        if (strncmp (filename, dir->name, dir->name_len) == 0 && strlen(filename) == dir->name_len){
-            return pos;
-        }
-        // Update position and index into it
-        pos = pos + cur_len;
-        dir = (struct ext2_dir_entry_2 *) pos;
+            // Get the length of the current block and type
+            int cur_len = dir->rec_len;
+            // if we found the next dir
+            if (strncmp (filename, dir->name, dir->name_len) == 0 && strlen(filename) == dir->name_len){
+                return pre_pos;
+            }
+            // Update position and index into it
+            pre_pos = pos;
+            pos = pos + cur_len;
+            dir = (struct ext2_dir_entry_2 *) pos;
         }while (pos % EXT2_BLOCK_SIZE != 0);
     }
     return 0;
@@ -168,8 +170,6 @@ unsigned int traverse(unsigned int inode, char *cur, char *filename){
                     return traverse(dir->inode, cur, filename);
                 }
             }
-            
-            
             // Update position and index into it
             pos = pos + cur_len;
             dir = (struct ext2_dir_entry_2 *) pos;

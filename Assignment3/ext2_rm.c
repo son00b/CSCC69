@@ -45,28 +45,26 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
-    char *dir_err = "given path cannot be directory";
+    char *type_err = "given path has to be regular file or link\n";
+    char *dne_err = "given path does not exist\n";
     // name of disk
     char *disk_name = argv[1];
     // path of file in disk
-    char *disk_path = argv[2];
+    char *path = argv[2];
     // the disk
     unsigned char *disk = saveImage(disk_name);
     init();
 
-    char *string = strdup(disk_path);
-    // skip root directory
-    char *cur = strsep(&string,"/");
-    cur = strsep(&string,"/");
     // if given path is root directory
-    if (strcmp(cur, "") == 0){
-        fprintf(stderr, "%s", dir_err);
+    if (strcmp(path, "/") == 0){
+        fprintf(stderr, "%s", type_err);
         exit(1);
     } else{
         // get the file name
-        char *filename = basename(disk_path);
+        char *filename = basename(path);
+        char *cur = strtok(path, "/");
         // for every item in the path
-        while(cur && strcmp(cur, "") != 0){
+        while(cur){
             // For all the directory blocks
             for (int i = 0; i < dirsin; i++) {
                 // Get the block number
@@ -74,7 +72,7 @@ int main(int argc, char *argv[]) {
                 // Get the position in bytes and index to block
                 unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
                 struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-                
+                unsigned long pre_pos = pos;
                 do {
                     
                     char *name = dir->name; 
@@ -84,17 +82,16 @@ int main(int argc, char *argv[]) {
                     if (strncmp(name, cur, dir->name_len) == 0 && strlen(cur) == dir->name_len){
                         // if this file is the last item in path
                         if (strncmp(name, filename, dir->name_len) == 0 && strlen(filename) == dir->name_len){
-                            // if the last item is file or link, Print
+                            // if the last item is file or link, remove
                             if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
                                 // Update position and index into it
-                                unsigned long pre_pos = pos - cur_len;
                                 struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
                                 pre_dir->rec_len = pre_dir->rec_len + dir->rec_len;
                                 dir->inode = 0;
                                 return 0;
                             }
                             else if (dir->file_type == EXT2_FT_DIR){
-                                fprintf(stderr, "%s", dir_err);
+                                fprintf(stderr, "%s", type_err);
                                 exit(1);
                             }
                         } 
@@ -103,19 +100,29 @@ int main(int argc, char *argv[]) {
                             unsigned int file_inode = traverse(dir->inode, cur, filename);
                             // if last item exists, return 0 otherwise return enoent
                             if(file_inode){
-                                unsigned long pre_pos = pos - cur_len;
-                                struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
-                                pre_dir->rec_len = pre_dir->rec_len + dir->rec_len;
-                                dir->inode = 0;
-                                return 0;
+                                // get the item as directory entry
+                                struct ext2_dir_entry_2 *dir_file = find_dir_entry(file_inode, filename);
+                                // remove if it's file or link 
+                                if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
+                                    unsigned long pre_pos = find_pre_pos(file_inode, filename);
+                                    struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
+                                    pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
+                                    dir_file->inode = 0;
+                                    return 0;
+                                }
+                                // print everything in directory if it's a directory, also print hidden files if -a specified
+                                else{
+                                    printf("%s", type_err);
+                                    exit(1);
+                                }
                             } 
                             else{
-                                return ENOENT;
+                                printf("%s", dne_err);
+                                exit(1);
                             }
                         }
                     }
-                    
-                    
+                    pre_pos = pos;
                     // Update position and index into it
                     pos = pos + cur_len;
                     dir = (struct ext2_dir_entry_2 *) pos;
@@ -124,9 +131,9 @@ int main(int argc, char *argv[]) {
                     // Position is multiple of block size, means we have reached the end
                 } while (pos % EXT2_BLOCK_SIZE != 0);
             }
-            cur = strsep(&string,"/");
+            cur = strtok(NULL, "/");
         }
-        return ENOENT;
+        fprintf(stderr, "%s", dne_err);
+        exit(1);
     }
-    return 0;
 }
