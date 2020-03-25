@@ -27,6 +27,7 @@ unsigned char* saveImage(char *name) {
     }
 }
 
+// initialize directories
 void init(){
     
     struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
@@ -104,6 +105,7 @@ void ls_block(unsigned int inode, int aflag){
     }
 }
 
+// finds previous position before given an inode (and filename)
 unsigned long find_pre_pos(unsigned int inode, char* filename){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
