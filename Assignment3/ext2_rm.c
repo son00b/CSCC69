@@ -45,23 +45,25 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
-    char *type_err = "given path has to be regular file or link\n";
-    char *dne_err = "given path does not exist\n";
+    
     // name of disk
     char *disk_name = argv[1];
     // path of file in disk
     char *path = argv[2];
     // the disk
-    unsigned char *disk = saveImage(disk_name);
-    init();
+    init(disk_name);
 
     // if given path is root directory
     if (strcmp(path, "/") == 0){
-        fprintf(stderr, "%s", type_err);
+        fprintf(stderr, "%s", dir_err);
         exit(1);
     } else{
         // get the file name
         char *filename = basename(path);
+        if (strcmp(filename, ".") == 0 || strcmp(filename, "..") == 0){
+            fprintf(stderr, "%s", dir_err);
+            exit(1);
+        }
         char *cur = strtok(path, "/");
         // for every item in the path
         while(cur){
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
                                 return 0;
                             }
                             else if (dir->file_type == EXT2_FT_DIR){
-                                fprintf(stderr, "%s", type_err);
+                                fprintf(stderr, "%s", dir_err);
                                 exit(1);
                             }
                         } 
@@ -110,15 +112,15 @@ int main(int argc, char *argv[]) {
                                     dir_file->inode = 0;
                                     return 0;
                                 }
-                                // print everything in directory if it's a directory, also print hidden files if -a specified
+                                // path cannot be directory
                                 else{
-                                    printf("%s", type_err);
-                                    exit(1);
+                                    fprintf(stderr, "%s", dir_err);
+                                    return EISDIR;
                                 }
                             } 
                             else{
-                                printf("%s", dne_err);
-                                exit(1);
+                                fprintf(stderr, "%s", dne_err);
+                                return ENOENT;
                             }
                         }
                     }
@@ -134,6 +136,6 @@ int main(int argc, char *argv[]) {
             cur = strtok(NULL, "/");
         }
         fprintf(stderr, "%s", dne_err);
-        exit(1);
+        return ENOENT;
     }
 }

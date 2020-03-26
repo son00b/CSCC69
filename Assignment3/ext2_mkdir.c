@@ -19,6 +19,12 @@ entry names are not null-terminated, etc.).
 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <libgen.h>
+#include <string.h>
+#include <errno.h>
+
+#include "ext2.h"
+#include "helper.c"
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_mkdir disk_name path_to_disk\n";
@@ -31,8 +37,7 @@ int main(int argc, char *argv[]) {
     // path of disk
     char *path = argv[2];
     // the disk
-    unsigned char *disk = saveImage(name);
-    init();
+    init(name);
 
     // get the parent inode
 

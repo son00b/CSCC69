@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
         for (i = 1; i < argc; i++) {
             if (strncmp(argv[i], "-a", strlen("-a")) == 0) {
                 if (i == 1) {
-                    fprintf(stderr, "-a should be after the disk image argument \n");
+                    fprintf(stderr, "%s", "-a should be after the disk image argument \n");
                     exit(1);
                 } else if (i == 2) {
                     pathindex = 3;
@@ -69,8 +69,7 @@ int main(int argc, char *argv[]) {
     char path[strlen(argv[pathindex])];
     strcpy(path, argv[pathindex]);
     // the disk
-    unsigned char *disk = saveImage(disk_name);
-    init();
+    init(disk_name);
     
     // cur = strtok(NULL, "/");
     // if given path is root directory
@@ -153,6 +152,7 @@ int main(int argc, char *argv[]) {
                                 return 0;
                             } 
                             else{
+                                fprintf(stderr, "%s", dne_err);
                                 return ENOENT;
                             }
                         }
@@ -167,6 +167,7 @@ int main(int argc, char *argv[]) {
             }
             cur = strtok(NULL, "/");
         }
+        fprintf(stderr, "%s", dne_err);
         return ENOENT;
     }
 
