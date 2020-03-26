@@ -38,12 +38,28 @@ int main(int argc, char *argv[]) {
     char *path = argv[2];
     // the disk
     init(name);
-    if (strcmp(name, "/") == 0){
+    if (strcmp(path, "/") == 0){
         fprintf(stderr, "%s", exist_err);
         return EEXIST;
     }
-    char *dirname = basename(path);
-    // get the parent inode
+    char *path_p = dirname(path);
+    printf("%s", path_p);
+    char *dir_name = basename(path);
+    char *parent = basename(path_p);
+    char *cur = strtok(path, "/");
+    printf("%s", cur);
+    // for every item in the path
+    if(cur){
+        unsigned int file_inode = traverse(2, cur, dir_name);
+        // if last item exists in path
+        if(file_inode){
+            fprintf(stderr, "%s", exist_err);
+            return EEXIST;
+        }
+
+        // get the parent inode
+    }
+    
 
     // check if dir exists
 
