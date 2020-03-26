@@ -38,7 +38,11 @@ int main(int argc, char *argv[]) {
     char *path = argv[2];
     // the disk
     init(name);
-
+    if (strcmp(name, "/") == 0){
+        fprintf(stderr, "%s", exist_err);
+        return EEXIST;
+    }
+    char *dirname = basename(path);
     // get the parent inode
 
     // check if dir exists

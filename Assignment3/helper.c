@@ -10,6 +10,7 @@
 // error messages
 char *dir_err = "given path cannot be directory\n";
 char *dne_err = "given path does not exist\n";
+char *exist_err = "given path already exists\n";
 
 unsigned char *disk;
 /**** The following array is used to keep track of directories ****/
@@ -156,22 +157,23 @@ unsigned int traverse(unsigned int inode, char *cur, char *filename){
         unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-            cur = strtok(NULL, "/");
             do {
-            // Get the length of the current block and type
-            int cur_len = dir->rec_len;
-            // if we found the next dir
-            if (strncmp (cur, dir->name, dir->name_len) == 0 && strlen(cur) == dir->name_len){
-                if (strncmp(dir->name, filename, dir->name_len) == 0 && strlen(filename) == dir->name_len){
-                    return dir->inode;
-                }else{
-                    return traverse(dir->inode, cur, filename);
+                // Get the length of the current block and type
+                int cur_len = dir->rec_len;
+                // if we found the next dir
+                if (strncmp (cur, dir->name, dir->name_len) == 0 && strlen(cur) == dir->name_len){
+                    if (strncmp(dir->name, filename, dir->name_len) == 0 && strlen(filename) == dir->name_len){
+                        return dir->inode;
+                    }else{
+                        cur = strtok(NULL, "/");
+                        return traverse(dir->inode, cur, filename);
+                    }
                 }
-            }
-            // Update position and index into it
-            pos = pos + cur_len;
-            dir = (struct ext2_dir_entry_2 *) pos;
+                // Update position and index into it
+                pos = pos + cur_len;
+                dir = (struct ext2_dir_entry_2 *) pos;
             }while (pos % EXT2_BLOCK_SIZE != 0);
+            
         }
     }
     return 0;

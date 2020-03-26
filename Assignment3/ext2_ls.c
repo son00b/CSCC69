@@ -107,65 +107,22 @@ int main(int argc, char *argv[]) {
         char *cur = strtok(path, "/");
         
         // for every item in the path
-        while(cur){
-            // For all the directory blocks
-            for (int i = 0; i < dirsin; i++) {
-                // Get the block number
-                int blocknum = dirs[i];
-                // Get the position in bytes and index to block
-                unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-                struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-                
-                do {
-                    char *name = dir->name; 
-                    // Get the length of the current block and type
-                    int cur_len = dir->rec_len;
-                    // if we found the file in path
-                    if (strncmp(name, cur, dir->name_len) == 0 && strlen(cur) == dir->name_len){
-                        // if this file is the last item in path
-                        if (strncmp(name, filename, dir->name_len) == 0 && strlen(filename) == dir->name_len){
-                            // if the last item is file or link, Print
-                            if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK){
-                                printf("%.*s\n", dir->name_len, dir->name);
-                                return 0;
-                            }
-                            else if (dir->file_type == EXT2_FT_DIR){
-                                ls_block(dir->inode, aflag);
-                                return 0;
-                            }
-                        } 
-                        // if not, get the last item in path, and print if exists
-                        else {
-                            unsigned int file_inode = traverse(dir->inode, cur, filename);
-                            // if last item exists in path
-                            if(file_inode){
-                                // get the item as directory entry
-                                struct ext2_dir_entry_2 *dir_file = find_dir_entry(file_inode, filename);
-                                // print the name if it's file or link 
-                                if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
-                                    printf("%.*s\n", dir_file->name_len, dir_file->name);
-                                }
-                                // print everything in directory if it's a directory, also print hidden files if -a specified
-                                else{
-                                    ls_block(file_inode, aflag);
-                                }
-                                return 0;
-                            } 
-                            else{
-                                fprintf(stderr, "%s", dne_err);
-                                return ENOENT;
-                            }
-                        }
-                    }
-                    // Update position and index into it
-                    pos = pos + cur_len;
-                    dir = (struct ext2_dir_entry_2 *) pos;
-
-                    // Last directory entry leads to the end of block. Check if 
-                    // Position is multiple of block size, means we have reached the end
-                } while (pos % EXT2_BLOCK_SIZE != 0);
+        if(cur){
+            unsigned int file_inode = traverse(2, cur, filename);
+            // if last item exists in path
+            if(file_inode){
+                // get the item as directory entry
+                struct ext2_dir_entry_2 *dir_file = find_dir_entry(file_inode, filename);
+                // print the name if it's file or link 
+                if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
+                    printf("%.*s\n", dir_file->name_len, dir_file->name);
+                }
+                // print everything in directory if it's a directory, also print hidden files if -a specified
+                else{
+                    ls_block(file_inode, aflag);
+                }
+                return 0;
             }
-            cur = strtok(NULL, "/");
         }
         fprintf(stderr, "%s", dne_err);
         return ENOENT;
