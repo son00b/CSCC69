@@ -109,41 +109,49 @@ int main(int argc, char *argv[]) {
         return EEXIST;
     }
 
-// char *dir_name = basename(path); //segfault
-// char *path_p = dirname(path); //segfault
-// char *parent = basename(path_p); //segfault
-
     int count = count_item_in_path(path);
     char **names = arr_names(count, path);
-print_names(count, path, names); // debug
+// print_names(count, path, names); // debug
     char* dir_name;
     char* parent_name;
     char* parent_path;
-    if (count == 0) { // path: /
-        // error?
-    } else if (count == 1) { // path: /level1
 
-    } else {
-        dir_name = names[count - 1];
-        parent_name = names[count - 2];
-        parent_path = get_parent_path(path);
-printf("%s\n", dir_name);
-printf("%s\n", parent_name);
-printf("%s\n", parent_path);
-printf("%s\n", path);
-    }
-
+    dir_name = names[count - 1];
+    parent_name = names[count - 2];
+    parent_path = get_parent_path(path);
+    
+    char *cur = strtok(path, "/");
+    char *cur_p = strtok(parent_path, "/");
     // for every item in the path
-    // if(cur){
-    //     unsigned int file_inode = traverse(2, cur, dir_name);
-    //     // if last item exists in path
-    //     if(file_inode){
-    //         fprintf(stderr, "%s", exist_err);
-    //         return EEXIST;
-    //     }
-
-    //     // get the parent inode
-    // }
+    if (count == 0){
+        fprintf(stderr, "%s", dne_err);
+        return ENOENT;
+    }
+    else if (count == 1){
+        unsigned int dir_inode = traverse(2, cur, dir_name);
+            if (dir_inode){
+                fprintf(stderr, "%s", exist_err);
+                return EEXIST;
+            }
+            create_dir(2, dir_name);
+            printf("%s", "yolo");
+    } else {
+        unsigned int parent_inode = traverse(2, cur_p, parent_name);
+        // if last item exists in path
+        if(parent_inode){
+            unsigned int dir_inode = traverse(2, cur, dir_name);
+            if (dir_inode){
+                fprintf(stderr, "%s", exist_err);
+                return EEXIST;
+            }
+            // create a new directory entry for the new dir
+            struct ext2_dir_entry_2 *new = malloc(sizeof(struct ext2_dir_entry_2));
+            printf("%s", "yolo");
+        }
+        fprintf(stderr, "%s", dne_err);
+        return ENOENT;
+    }
+    
 
     // check if dir exists
 

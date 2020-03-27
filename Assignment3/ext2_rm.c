@@ -75,16 +75,16 @@ int main(int argc, char *argv[]) {
                 // remove if it's file or link 
                 if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
                     unsigned long pre_pos = find_pre_pos(file_inode, filename);
-                    struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
-                    pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
+                    if (pre_pos){
+                        struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
+                        pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
+                    }
                     dir_file->inode = 0;
                     return 0;
                 }
                 // path cannot be directory
-                else{
-                    fprintf(stderr, "%s", dir_err);
-                    return EISDIR;
-                }
+                fprintf(stderr, "%s", dir_err);
+                return EISDIR;
             }
         }
         fprintf(stderr, "%s", dne_err);

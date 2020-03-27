@@ -10,7 +10,7 @@
 // error messages
 char *dir_err = "given path cannot be directory\n";
 char *dne_err = "given path does not exist\n";
-char *exist_err = "given path already exists\n";
+char *exist_err = "given name already exists\n";
 
 unsigned char *disk;
 /**** The following array is used to keep track of directories ****/
@@ -99,6 +99,49 @@ void ls_block(unsigned int inode, int aflag){
             // Position is multiple of block size, means we have reached the end
             } while (pos % EXT2_BLOCK_SIZE != 0);
         }
+    }
+}
+
+int allocate(unsigned int inode, int size){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        unsigned long pre_pos = pos;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+            do {
+                printf("%d ", dir->rec_len);
+                // Get the length of the current block and type
+                int cur_len = dir->rec_len;
+                int dir_size = sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + strlen(dir->name) + sizeof(dir->file_type);
+                
+                printf("%d \n", dir_size);
+                if (size + dir_size <= cur_len){
+                    dir->rec_len = dir_size;
+                    return cur_len - dir_size;
+                }
+                pos = pos + cur_len;
+                dir = (struct ext2_dir_entry_2 *) pos;
+            }while (pos % EXT2_BLOCK_SIZE != 0);
+        }
+    }
+    return 0;
+}
+
+void create_dir(unsigned int parent_inode, char *dir_name){
+    // create a new directory entry for the new dir
+    struct ext2_dir_entry_2 *new = malloc(sizeof(struct ext2_dir_entry_2));
+    new->file_type = EXT2_FT_DIR;
+    strcpy(new->name, dir_name);
+    new->name_len = strlen(dir_name);
+    int total_size = sizeof(unsigned int) + sizeof(unsigned short) + sizeof(new->name_len) + strlen(new->name) + sizeof(new->file_type);
+    new->rec_len = allocate(parent_inode, total_size);
+    if(new->rec_len){
+        // create inode number
+    } else {
+        fprintf(stderr, "%s", "no space available");
     }
 }
 
