@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
                         pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
                     }
                     dir_file->inode = 0;
+                    remove_link(file_inode);
                     return 0;
                 }
                 // path cannot be directory

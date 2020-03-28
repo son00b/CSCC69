@@ -16,6 +16,9 @@ unsigned char *disk;
 /**** The following array is used to keep track of directories ****/
 int dirs[128];
 int dirsin = 0;
+int inumc = 1;  // because we stored the first one
+// Want to keep track of the used inodes in this array
+int inum[32];
 
 void init(char *name) {
     
@@ -33,11 +36,10 @@ void init(char *name) {
         struct   ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
         // Get inode bitmap
         char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
-        // Want to keep track of the used inodes in this array
-        int inum[32];
+        
         inum[0] = 1;    // Root inode is Inode number 2, index 1
         // current size of the array
-        int inumc = 1;  // because we stored the first one
+        
         // counter for shift
         int index2 = 0;
         for (int i = 0; i < sb->s_inodes_count; i++) {
@@ -102,22 +104,35 @@ void ls_block(unsigned int inode, int aflag){
     }
 }
 
+void remove_link(unsigned int inode){
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
+    // Go through all the used inodes stored in the array above
+    for (int i = 0; i < inumc; i++) {
+        // Remember array stores the index
+        struct ext2_inode* curr = in + inum[i];
+        int inodenum = inum[i] + 1;
+        if (inodenum == inode){
+            curr->i_links_count = curr->i_links_count - 1;
+        }
+    }
+}
+
 int allocate(unsigned int inode, int size){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];
         // Get the position in bytes and index to block
         unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-        unsigned long pre_pos = pos;
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         if (inode == dir->inode && strcmp(dir->name, ".") == 0){
             do {
                 printf("%d ", dir->rec_len);
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
-                int dir_size = sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + strlen(dir->name) + sizeof(dir->file_type);
+                int dir_size = round_up(sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + dir->name_len + sizeof(dir->file_type));
                 
-                printf("%d \n", dir_size);
+                printf("%d %d\n", dir_size, size);
                 if (size + dir_size <= cur_len){
                     dir->rec_len = dir_size;
                     return cur_len - dir_size;
@@ -130,17 +145,29 @@ int allocate(unsigned int inode, int size){
     return 0;
 }
 
+void find_free_inode(struct ext2_dir_entry_2 *dir){
+
+}
+
+int round_up(int n){
+    int remainder = n % 4;
+    return n + (4 - remainder);
+}
+
 void create_dir(unsigned int parent_inode, char *dir_name){
     // create a new directory entry for the new dir
     struct ext2_dir_entry_2 *new = malloc(sizeof(struct ext2_dir_entry_2));
     new->file_type = EXT2_FT_DIR;
     strcpy(new->name, dir_name);
     new->name_len = strlen(dir_name);
-    int total_size = sizeof(unsigned int) + sizeof(unsigned short) + sizeof(new->name_len) + strlen(new->name) + sizeof(new->file_type);
+    int total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(new->name_len) + new->name_len + sizeof(new->file_type));
+    
     new->rec_len = allocate(parent_inode, total_size);
+    printf("%d", new->rec_len);
     if(new->rec_len){
-        // create inode number
+        find_free_inode(new);
     } else {
+        new->rec_len = 1024;
         fprintf(stderr, "%s", "no space available");
     }
 }
