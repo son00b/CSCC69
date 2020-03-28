@@ -39,6 +39,21 @@ and implement the additional functionality in this separate source file.
 #include "ext2.h"
 #include "helper.c"
 
+// decrease link count by 1 given inode
+void remove_link(unsigned int inode){
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
+    // Go through all the used inodes stored in the array above
+    for (int i = 0; i < inumc; i++) {
+        // Remember array stores the index
+        struct ext2_inode* curr = in + inum[i];
+        int inodenum = inum[i] + 1;
+        if (inodenum == inode){
+            curr->i_links_count = curr->i_links_count - 1;
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_rm disk_name path_to_file/link\n";
     if (argc != 3) {

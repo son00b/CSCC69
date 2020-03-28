@@ -32,6 +32,35 @@ and refrain from printing the . and ..
 #include "ext2.h"
 #include "helper.c"
 
+// print everything in a directory block
+void ls_block(unsigned int inode, int aflag){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+            do {
+            // Get the length of the current block and type
+            int cur_len = dir->rec_len;
+            // if file is regula file, link, or directory then print
+            if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_DIR){
+                // print hidden files only if -a is specified
+                if (strncmp(".", dir->name, strlen(".")) != 0 || aflag == 1){
+                    printf("%.*s\n", dir->name_len, dir->name);
+                }
+            }
+            // Update position and index into it
+            pos = pos + cur_len;
+            dir = (struct ext2_dir_entry_2 *) pos;
+            // Last directory entry leads to the end of block. Check if 
+            // Position is multiple of block size, means we have reached the end
+            } while (pos % EXT2_BLOCK_SIZE != 0);
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_ls disk_name path_to_disk [-a]\n";
     
@@ -70,34 +99,9 @@ int main(int argc, char *argv[]) {
     strcpy(path, argv[pathindex]);
     // the disk
     init(disk_name);
-    
-    // cur = strtok(NULL, "/");
     // if given path is root directory
     if (strcmp(path, "/") == 0){
-        // for all the directories
-        for (int i = 0; i < dirsin; i++) {
-        // Get the block number
-            int blocknum = dirs[i];
-            // Get the position in bytes and index to block
-            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-            if (dir->inode == 2 && strcmp(dir->name, ".") == 0){
-                do {
-                // Get the length of the current block and type
-                int cur_len = dir->rec_len;
-                // print all non hidden files and hidden only if specified
-                    if (strncmp(".", dir->name, strlen(".")) != 0 || aflag == 1){
-                        printf("%.*s\n", dir->name_len, dir->name);
-                    }
-                // Update position and index into it
-                pos = pos + cur_len;
-                dir = (struct ext2_dir_entry_2 *) pos;
-
-                // Last directory entry leads to the end of block. Check if 
-                // Position is multiple of block size, means we have reached the end
-                } while (pos % EXT2_BLOCK_SIZE != 0);
-            }
-        }
+        ls_block(2, aflag);
     } 
     // if the given path isn't root
     else{

@@ -75,48 +75,13 @@ void init(char *name) {
     }
 }
 
-// print everything in a directory block
-void ls_block(unsigned int inode, int aflag){
-    for (int i = 0; i < dirsin; i++) {
-        // Get the block number
-        int blocknum = dirs[i];
-        // Get the position in bytes and index to block
-        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-            do {
-            // Get the length of the current block and type
-            int cur_len = dir->rec_len;
-            // if file is regula file, link, or directory then print
-            if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_DIR){
-                // print hidden files only if -a is specified
-                if (strncmp(".", dir->name, strlen(".")) != 0 || aflag == 1){
-                    printf("%.*s\n", dir->name_len, dir->name);
-                }
-            }
-            // Update position and index into it
-            pos = pos + cur_len;
-            dir = (struct ext2_dir_entry_2 *) pos;
-            // Last directory entry leads to the end of block. Check if 
-            // Position is multiple of block size, means we have reached the end
-            } while (pos % EXT2_BLOCK_SIZE != 0);
-        }
-    }
+
+
+int round_up(int n){
+    int remainder = n % 4;
+    return n + (4 - remainder);
 }
 
-void remove_link(unsigned int inode){
-    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
-    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
-    // Go through all the used inodes stored in the array above
-    for (int i = 0; i < inumc; i++) {
-        // Remember array stores the index
-        struct ext2_inode* curr = in + inum[i];
-        int inodenum = inum[i] + 1;
-        if (inodenum == inode){
-            curr->i_links_count = curr->i_links_count - 1;
-        }
-    }
-}
 
 int allocate(unsigned int inode, int size){
     for (int i = 0; i < dirsin; i++) {
@@ -127,12 +92,10 @@ int allocate(unsigned int inode, int size){
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
         if (inode == dir->inode && strcmp(dir->name, ".") == 0){
             do {
-                printf("%d ", dir->rec_len);
                 // Get the length of the current block and type
                 int cur_len = dir->rec_len;
                 int dir_size = round_up(sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + dir->name_len + sizeof(dir->file_type));
-                
-                printf("%d %d\n", dir_size, size);
+
                 if (size + dir_size <= cur_len){
                     dir->rec_len = dir_size;
                     return cur_len - dir_size;
@@ -145,13 +108,40 @@ int allocate(unsigned int inode, int size){
     return 0;
 }
 
-void find_free_inode(struct ext2_dir_entry_2 *dir){
-
+// return 1 if it's free and 0 if not
+int is_free_inode(unsigned int inode){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+            return 0;
+        }
+    }
+    return 1;
 }
 
-int round_up(int n){
-    int remainder = n % 4;
-    return n + (4 - remainder);
+unsigned int find_free_inode(){
+    unsigned int inode = 11;
+    int find = 0;
+    while(!find){
+        if (is_free_inode(inode)){
+            find = 1;
+        } else{
+            inode++;
+        }
+    }
+    return inode;
+}
+
+void allocate_inode(unsigned int inode){
+    // get inode bitmap
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    bgd->bg_free_inodes_count--;
+    bgd->bg_used_dirs_count++;
+    char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
 }
 
 void create_dir(unsigned int parent_inode, char *dir_name){
@@ -165,7 +155,8 @@ void create_dir(unsigned int parent_inode, char *dir_name){
     new->rec_len = allocate(parent_inode, total_size);
     printf("%d", new->rec_len);
     if(new->rec_len){
-        find_free_inode(new);
+        unsigned int inode = find_free_inode();
+        new->inode = inode;
     } else {
         new->rec_len = 1024;
         fprintf(stderr, "%s", "no space available");
