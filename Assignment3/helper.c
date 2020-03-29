@@ -76,21 +76,27 @@ void init(char *name) {
 }
 
 
-char *get_parent_path(char* path) {
+char *get_parent_path(int count, char* path) {
     char *copy = malloc((strlen(path) + 1) * sizeof(char));
     if (copy == NULL) {
         perror("malloc");
         exit(1);
     }
-    strcpy(copy, path);
-    if (strlen(copy) >= 1) {
-        if (copy[strlen(copy) - 1] == '/') {
-            copy[strlen(copy) - 1] = 0;
+    if (count == 1) {
+        strcpy(copy, "/");
+    } else {
+        strcpy(copy, path);
+        // trim / at the end of string if it exists
+        if (strlen(copy) >= 1) {
+            if (copy[strlen(copy) - 1] == '/') {
+                copy[strlen(copy) - 1] = 0;
+            }
         }
-    }
-    char *final_slash = strrchr(copy, '/');
-    if (final_slash) {
-      *(final_slash) = 0;
+        // remove anything after the / before the base filename
+        char *final_slash = strrchr(copy, '/');
+        if (final_slash) {
+            *(final_slash) = 0;
+        }
     }
     return copy;
 }
