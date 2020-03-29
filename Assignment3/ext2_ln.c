@@ -24,6 +24,11 @@ use the ext2 specs and ask on the discussion board.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
+#include <errno.h>
+
+#include "ext2.h"
+#include "helper.c"
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_ln disk_name path_to_disk1 path_to_disk2 [-s]\n";
@@ -56,5 +61,46 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
     }
-    return 0;
+    char *disk_name = argv[diskindex];
+    char *path1 = argv[pathindexA];
+    char *path2 = argv[pathindexB];
+    char *filename1 = basename(path1);
+    char *filename2 = basename(path2);
+    char* parent_name;
+    char* parent_path;
+    init(disk_name);
+
+    if(strcmp(path1, "/") == 0 || strcmp(path2, "/")){
+        fprintf(stderr, "%s", dir_err);
+        return EISDIR;
+    }
+
+    char *cur1 = strtok(path1, "/");
+    char *cur2 = strtok(path2, "/");
+
+    if(cur1 && cur2){
+        unsigned int inode1 = traverse(2, cur1, filename1);
+        unsigned int inode2 = traverse(2, cur2, filename2);
+            // if last item exists in path
+        if(!inode1){
+            fprintf(stderr, "%s", dne_err);
+            return ENOENT;
+        }
+        if(inode2){
+            fprintf(stderr, "%s", exist_err);
+            return EEXIST;
+        }
+        // get the item as directory entry
+        struct ext2_dir_entry_2 *dir_file = find_dir_entry(inode1, filename1);
+        // print the name if it's file or link 
+        if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
+            // create link
+        }
+        else{
+            fprintf(stderr, "%s", dir_err);
+            return EISDIR;
+        }
+        return 0;
+    }
+    return ENOENT;
 }

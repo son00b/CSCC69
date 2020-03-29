@@ -76,6 +76,24 @@ void init(char *name) {
 }
 
 
+char *get_parent_path(char* path) {
+    char *copy = malloc((strlen(path) + 1) * sizeof(char));
+    if (copy == NULL) {
+        perror("malloc");
+        exit(1);
+    }
+    strcpy(copy, path);
+    if (strlen(copy) >= 1) {
+        if (copy[strlen(copy) - 1] == '/') {
+            copy[strlen(copy) - 1] = 0;
+        }
+    }
+    char *final_slash = strrchr(copy, '/');
+    if (final_slash) {
+      *(final_slash) = 0;
+    }
+    return copy;
+}
 
 int round_up(int n){
     int remainder = n % 4;
@@ -198,6 +216,7 @@ int create_dir(unsigned int parent_inode, char *dir_name){
             new->rec_len = cur_len - dir_size;
             unsigned int inode = find_free_inode();
             new->inode = inode;
+            printf("%u", new->inode);
             return 1;
         }
         pos = pos + cur_len;

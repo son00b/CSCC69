@@ -65,24 +65,6 @@ char** arr_names(int count, char* path) {
     return names;
 }
 
-char *get_parent_path(char* path) {
-    char *copy = malloc((strlen(path) + 1) * sizeof(char));
-    if (copy == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-    strcpy(copy, path);
-    if (strlen(copy) >= 1) {
-        if (copy[strlen(copy) - 1] == '/') {
-            copy[strlen(copy) - 1] = 0;
-        }
-    }
-    char *final_slash = strrchr(copy, '/');
-    if (final_slash) {
-      *(final_slash) = 0;
-    }
-    return copy;
-}
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_mkdir disk_name path_to_disk\n";
@@ -106,8 +88,6 @@ int main(int argc, char *argv[]) {
     char* dir_name;
     char* parent_name;
     char* parent_path;
-
-    printf("%d ", "count");
     // for every item in the path
     if (count == 0){
         fprintf(stderr, "%s", dne_err);
