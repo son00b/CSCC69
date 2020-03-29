@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
     else {
         dir_name = names[count - 1];
         parent_name = names[count - 2];
-        parent_path = get_parent_path(path);
+        parent_path = get_parent_path(count, path);
         printf("%s", "yolo");
         char *cur = strtok(path, "/");
         char *cur_p = strtok(parent_path, "/");
