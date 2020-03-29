@@ -142,25 +142,68 @@ void allocate_inode(unsigned int inode){
     bgd->bg_free_inodes_count--;
     bgd->bg_used_dirs_count++;
     char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
+    inumc++;
+    inum[inumc] = inode;
+    // Remember array stores the index
+    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
+    struct ext2_inode* new = in + inum[inumc];
+    new->i_mode = EXT2_FT_DIR;
+    new->i_links_count = 1;
+    unsigned int *arr = new->i_block;
+    // Loop through and print all value till a 0 is seen in the array
+    while(1) {
+        if (*arr == 0) {
+            break;
+        }
+        // If it's a directory, add to the array.
+        dirs[dirsin++] = *arr;
+        arr++;
+    }
 }
 
-void create_dir(unsigned int parent_inode, char *dir_name){
-    // create a new directory entry for the new dir
-    struct ext2_dir_entry_2 *new = malloc(sizeof(struct ext2_dir_entry_2));
-    new->file_type = EXT2_FT_DIR;
-    strcpy(new->name, dir_name);
-    new->name_len = strlen(dir_name);
-    int total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(new->name_len) + new->name_len + sizeof(new->file_type));
-    
-    new->rec_len = allocate(parent_inode, total_size);
-    printf("%d", new->rec_len);
-    if(new->rec_len){
-        unsigned int inode = find_free_inode();
-        new->inode = inode;
-    } else {
-        new->rec_len = 1024;
-        fprintf(stderr, "%s", "no space available");
+unsigned long find_dir_block_pos(unsigned int inode){
+    for (int i = 0; i < dirsin; i++) {
+        // Get the block number
+        int blocknum = dirs[i];
+        // Get the position in bytes and index to block
+        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
+            return pos;
+        }
     }
+    return 0;
+}
+
+int create_dir(unsigned int parent_inode, char *dir_name){
+    
+    int total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(strlen(dir_name)) + strlen(dir_name) + sizeof(EXT2_FT_DIR));
+    
+    // get parent dir
+    unsigned long pos = find_dir_block_pos(parent_inode);
+    struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+    do {
+        // Get the length of the current block and type
+        int cur_len = dir->rec_len;
+        int dir_size = round_up(sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + dir->name_len + sizeof(dir->file_type));
+        if (dir_size + total_size <= cur_len){
+            dir->rec_len = dir_size;
+            
+            cur_len = cur_len - dir_size;;
+            // set up new directory
+            struct ext2_dir_entry_2 *new = (struct ext2_dir_entry_2 *) (pos + cur_len);
+            new->file_type = EXT2_FT_DIR;
+            strcpy(new->name, dir_name);
+            new->name_len = strlen(dir_name);
+            new->rec_len = cur_len - dir_size;
+            unsigned int inode = find_free_inode();
+            new->inode = inode;
+            return 1;
+        }
+        pos = pos + cur_len;
+        dir = (struct ext2_dir_entry_2 *) pos;
+    }while (pos % EXT2_BLOCK_SIZE != 0);
+    return 0;
 }
 
 // finds previous position before given an inode (and filename)
