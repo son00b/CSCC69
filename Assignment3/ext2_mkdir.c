@@ -63,7 +63,8 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "%s", exist_err);
                 return EEXIST;
             }
-        int succ = create_dir(2, dir_name);
+        int inode = find_free_inode();
+        int succ = create_link(2, inode, dir_name);
         if (succ){
             printf("%s", "yolo1");
         }
