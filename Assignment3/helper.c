@@ -166,6 +166,27 @@ int is_free_inode(unsigned int inode){
     return 1;
 }
 
+char** arr_names(int count, char* path) {
+    char *copy = malloc((strlen(path) + 1) * sizeof(char));
+    if (copy == NULL) {
+        perror("malloc");
+        exit(1);
+    }
+    strcpy(copy, path);
+
+    char **names = malloc(count *  sizeof(char*));
+    int j = 0;
+    char *token = strtok(copy, "/");
+    while (token != NULL) {
+        names[j] = malloc(EXT2_NAME_LEN * sizeof(char));
+        strcpy(names[j], token);
+        j++;
+        token = strtok(NULL, "/");
+    }
+    free(copy);
+    return names;
+}
+
 unsigned int find_free_inode(){
     unsigned int inode = 11;
     int find = 0;
@@ -323,6 +344,9 @@ struct ext2_dir_entry_2 *find_dir_entry(unsigned int inode, char *filename){
 }
 
 unsigned int traverse(unsigned int inode, char *cur, char *filename){
+    if(strcmp(filename, "/") == 0){
+        return EXT2_ROOT_INO;
+    }
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
         int blocknum = dirs[i];

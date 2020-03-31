@@ -25,26 +25,7 @@ entry names are not null-terminated, etc.).
 #include "ext2.h"
 #include "helper.c"
 
-char** arr_names(int count, char* path) {
-    char *copy = malloc((strlen(path) + 1) * sizeof(char));
-    if (copy == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-    strcpy(copy, path);
 
-    char **names = malloc(count *  sizeof(char*));
-    int j = 0;
-    char *token = strtok(copy, "/");
-    while (token != NULL) {
-        names[j] = malloc(EXT2_NAME_LEN * sizeof(char));
-        strcpy(names[j], token);
-        j++;
-        token = strtok(NULL, "/");
-    }
-    free(copy);
-    return names;
-}
 
 
 int main(int argc, char *argv[]) {
