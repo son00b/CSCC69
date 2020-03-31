@@ -149,7 +149,6 @@ int main(int argc, char **argv) {
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
 
         printf("    DIR BLOCK NUM: %d (for inode %d)\n", blocknum, dir->inode);
-
         do {
             // Get the length of the current block and type
             int cur_len = dir->rec_len;
@@ -159,6 +158,7 @@ int main(int argc, char **argv) {
             printf("Inode: %d rec_len: %d name_len: %d file_type: %c name: %.*s\n", 
                 dir->inode, dir->rec_len, dir->name_len, typ, dir->name_len, dir->name);
             // Update position and index into it
+            
             pos = pos + cur_len;
             dir = (struct ext2_dir_entry_2 *) pos;
 

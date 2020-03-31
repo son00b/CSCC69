@@ -76,6 +76,25 @@ void init(char *name) {
 }
 
 
+int count_item_in_path(char* path) {
+    char *copy = malloc((strlen(path) + 1) * sizeof(char));
+    if (copy == NULL) {
+        perror("malloc");
+        exit(1);
+    }
+    strcpy(copy, path);
+
+    int count = 0;
+    char *cur = strtok(copy, "/");
+    while (cur != NULL)
+    {
+        count++;
+        cur = strtok(NULL, "/");
+    }
+    free(copy);
+    return count;
+}
+
 char *get_parent_path(int count, char* path) {
     char *copy = malloc((strlen(path) + 1) * sizeof(char));
     if (copy == NULL) {
@@ -196,6 +215,31 @@ unsigned long find_dir_block_pos(unsigned int inode){
             return pos;
         }
     }
+    return 0;
+}
+
+int create_link(unsigned int parent_inode, unsigned int inode, char *name){
+    int total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(name) + strlen(name) + sizeof(EXT2_FT_REG_FILE));
+    unsigned long pos = find_dir_block_pos(parent_inode);
+    struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+    do {
+        // Get the length of the current block and type
+        int cur_len = dir->rec_len;
+        int dir_size = round_up(sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + dir->name_len + sizeof(dir->file_type));
+        if (dir_size + total_size <= cur_len){
+            dir->rec_len = dir_size;
+            // set up new directory
+            dir = (void*) dir + dir->rec_len;
+            dir->file_type = EXT2_FT_REG_FILE;
+            strcpy(dir->name, name);
+            dir->name_len = strlen(name);
+            dir->rec_len = cur_len - dir_size;
+            dir->inode = inode;
+            return 1;
+        }
+        pos = pos + cur_len;
+        dir = (struct ext2_dir_entry_2 *) pos;
+    }while (pos % EXT2_BLOCK_SIZE != 0);
     return 0;
 }
 

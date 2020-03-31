@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
     char* parent_path;
     init(disk_name);
 
-    if(strcmp(path1, "/") == 0 || strcmp(path2, "/")){
+    if(strcmp(path1, "/") == 0 || strcmp(path2, "/") == 0){
         fprintf(stderr, "%s", dir_err);
         return EISDIR;
     }
@@ -79,6 +79,7 @@ int main(int argc, char *argv[]) {
     char *cur2 = strtok(path2, "/");
 
     if(cur1 && cur2){
+        printf("%s", cur1);
         unsigned int inode1 = traverse(2, cur1, filename1);
         unsigned int inode2 = traverse(2, cur2, filename2);
             // if last item exists in path
@@ -93,8 +94,19 @@ int main(int argc, char *argv[]) {
         // get the item as directory entry
         struct ext2_dir_entry_2 *dir_file = find_dir_entry(inode1, filename1);
         // print the name if it's file or link 
+        printf("%d", dir_file->file_type);
         if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
-            // create link
+            int count = count_item_in_path(path2);
+            unsigned int parent_inode;
+            if (count == 1){
+                parent_inode = 2;
+            } else if (count >= 2){
+                parent_path = get_parent_path(count, path2);
+                char *cur_p = strtok(parent_path, "/");
+                parent_name = basename(parent_path);
+                parent_inode = traverse(2, cur_p, parent_name);
+            }
+            create_link(parent_inode, inode1, filename2);
         }
         else{
             fprintf(stderr, "%s", dir_err);
