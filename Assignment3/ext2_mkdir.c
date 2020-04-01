@@ -59,13 +59,15 @@ int main(int argc, char *argv[]) {
         dir_name = names[count - 1];
         char *cur = strtok(path, "/");
         unsigned int dir_inode = traverse(2, cur, dir_name);
-            if (dir_inode){
-                fprintf(stderr, "%s", exist_err);
-                return EEXIST;
-            }
+        if (dir_inode){
+            fprintf(stderr, "%s", exist_err);
+            return EEXIST;
+        }
         int inode = find_free_inode();
-        int succ = create_link(2, inode, dir_name);
+        int succ = create_link(2, inode, dir_name, EXT2_FT_DIR);
         if (succ){
+            // create new block
+            allocate(inode, 2, EXT2_S_IFDIR);
             printf("%s", "yolo1");
         }
     } 
@@ -84,9 +86,13 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "%s", exist_err);
                 return EEXIST;
             }
-            // create a new directory entry for the new dir
-            struct ext2_dir_entry_2 *new = malloc(sizeof(struct ext2_dir_entry_2));
-            printf("%s", "yolo");
+            int inode = find_free_inode();
+            int succ = create_link(2, inode, dir_name, EXT2_FT_DIR);
+            if (succ){
+                // create new block
+                allocate(inode, parent_inode, EXT2_S_IFDIR);
+                printf("%s", "yolo1");
+            }
         }
         fprintf(stderr, "%s", dne_err);
         for (int k = 0; k < count; k++) {

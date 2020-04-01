@@ -117,7 +117,8 @@ int main(int argc, char *argv[]) {
             char *cur_p = strtok(parent_path, "/");
             parent_name = basename(parent_path);
             parent_inode = traverse(2, cur_p, parent_name);
-            create_link(parent_inode, inode1, filename2);
+            create_link(parent_inode, inode1, filename2, EXT2_FT_REG_FILE);
+            allocate(inode1, parent_inode, EXT2_S_IFREG);
         }
         else{
             fprintf(stderr, "%s", dir_err);

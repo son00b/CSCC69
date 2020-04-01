@@ -125,32 +125,6 @@ int round_up(int n){
     return n + (4 - remainder);
 }
 
-
-int allocate(unsigned int inode, int size){
-    for (int i = 0; i < dirsin; i++) {
-        // Get the block number
-        int blocknum = dirs[i];
-        // Get the position in bytes and index to block
-        unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-            do {
-                // Get the length of the current block and type
-                int cur_len = dir->rec_len;
-                int dir_size = round_up(sizeof(dir->inode) + sizeof(dir->rec_len) + sizeof(dir->name_len) + dir->name_len + sizeof(dir->file_type));
-
-                if (size + dir_size <= cur_len){
-                    dir->rec_len = dir_size;
-                    return cur_len - dir_size;
-                }
-                pos = pos + cur_len;
-                dir = (struct ext2_dir_entry_2 *) pos;
-            }while (pos % EXT2_BLOCK_SIZE != 0);
-        }
-    }
-    return 0;
-}
-
 char** arr_names(int count, char* path) {
     char *copy = malloc((strlen(path) + 1) * sizeof(char));
     if (copy == NULL) {
@@ -172,6 +146,24 @@ char** arr_names(int count, char* path) {
     return names;
 }
 
+unsigned int find_free_block(){
+    struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    char *bm = (char *) (disk + (bgd->bg_block_bitmap * EXT2_BLOCK_SIZE));
+    // counter for shift
+    int index = 0;
+    for (int i = 0; i < sb->s_blocks_count; i++) {
+        unsigned c = bm[i / 8];                     // get the corresponding byte
+        if ((c & (1 << index)) == 0) { 
+            bm[i/8] = bm[i/8] | (1 << index);
+            printf("%d %d", (c & (1 << index)) > 0, i+1);
+            return i + 1;
+        }
+        if (++index == 8) (index = 0); // increment shift index, if > 8 reset.
+    }
+    return 0;
+}
+
 unsigned int find_free_inode(){
     // Index to the group descriptor, cast to the required struct
     struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
@@ -179,7 +171,6 @@ unsigned int find_free_inode(){
     char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
     unsigned int inode = 12;
 
-    printf("inode bitmap: ");
     int index2 = 0;
     for (int i = 0; i < sb->s_inodes_count; i++) {
         unsigned c = bmi[i / 8];                     // get the corresponding byte
@@ -197,31 +188,6 @@ unsigned int find_free_inode(){
     return 0;
 }
 
-void allocate_inode(unsigned int inode){
-    // get inode bitmap
-    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
-    bgd->bg_free_inodes_count--;
-    bgd->bg_used_dirs_count++;
-    char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
-    inumc++;
-    inum[inumc] = inode;
-    // Remember array stores the index
-    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
-    struct ext2_inode* new = in + inum[inumc];
-    new->i_mode = EXT2_FT_DIR;
-    new->i_links_count = 1;
-    unsigned int *arr = new->i_block;
-    // Loop through and print all value till a 0 is seen in the array
-    while(1) {
-        if (*arr == 0) {
-            break;
-        }
-        // If it's a directory, add to the array.
-        dirs[dirsin++] = *arr;
-        arr++;
-    }
-}
-
 unsigned long find_dir_block_pos(unsigned int inode){
     for (int i = 0; i < dirsin; i++) {
         // Get the block number
@@ -236,7 +202,7 @@ unsigned long find_dir_block_pos(unsigned int inode){
     return 0;
 }
 
-int create_link(unsigned int parent_inode, unsigned int inode, char *name){
+int create_link(unsigned int parent_inode, unsigned int inode, char *name, unsigned char mode){
     int total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(name) + strlen(name) + sizeof(EXT2_FT_REG_FILE));
     unsigned long pos = find_dir_block_pos(parent_inode);
     struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
@@ -248,17 +214,53 @@ int create_link(unsigned int parent_inode, unsigned int inode, char *name){
             dir->rec_len = dir_size;
             // set up new directory
             dir = (void*) dir + dir->rec_len;
-            dir->file_type = EXT2_FT_REG_FILE;
+            dir->file_type = mode;
             strcpy(dir->name, name);
             dir->name_len = strlen(name);
             dir->rec_len = cur_len - dir_size;
             dir->inode = inode;
+            // set link count;
+            
             return 1;
         }
         pos = pos + cur_len;
         dir = (struct ext2_dir_entry_2 *) pos;
     }while (pos % EXT2_BLOCK_SIZE != 0);
     return 0;
+}
+
+void allocate (unsigned int inode, unsigned int parent_inode, unsigned short mode) {
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
+    struct ext2_inode *new = in + (inode - 1);
+    new->i_mode = mode;
+    new->i_links_count++;
+    if (S_ISDIR(mode)){
+        new->i_links_count++;
+        new->i_blocks = 2;
+        new->i_size = EXT2_BLOCK_SIZE;
+        unsigned int block = find_free_block();
+        new->i_block[0] = block;
+        // set for .
+        unsigned long pos = (unsigned long) disk + block * EXT2_BLOCK_SIZE;
+        struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+        dir->rec_len = 12;
+        strcpy(dir->name, ".");
+        dir->name_len = 1;
+        dir->file_type = EXT2_FT_DIR;
+        dir->inode = inode;
+        // set for ..
+        pos = pos + dir->rec_len;
+        dir = (struct ext2_dir_entry_2 *) pos;
+        dir->rec_len = 1012;
+        strcpy(dir->name, "..");
+        dir->name_len = 2;
+        dir->file_type = EXT2_FT_DIR;
+        dir->inode = parent_inode;
+        // update parent link count
+        struct ext2_inode *parent = in + (parent_inode - 1);
+        parent->i_links_count++;
+    }
 }
 
 // finds previous position before given an inode (and filename)
