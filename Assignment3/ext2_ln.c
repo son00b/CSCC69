@@ -115,7 +115,6 @@ int main(int argc, char *argv[]) {
         // print the name if it's file or link 
         if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
             char *cur_p = strtok(parent_path, "/");
-            parent_name = basename(parent_path);
             parent_inode = traverse(2, cur_p, parent_name);
             create_link(parent_inode, inode1, filename2, EXT2_FT_REG_FILE);
             allocate(inode1, parent_inode, EXT2_S_IFREG);
