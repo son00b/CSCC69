@@ -31,7 +31,6 @@ use the ext2 specs and ask on the discussion board.
 #include "helper.c"
 
 int main(int argc, char *argv[]) {
-    printf("%s", "asd");
     char *err_message = "USAGE: ./ext2_ln disk_name path_to_disk1 path_to_disk2 [-s]\n";
     if (argc != 4 && argc != 5) {
         fprintf(stderr, "%s", err_message);
@@ -97,14 +96,21 @@ int main(int argc, char *argv[]) {
         char **names2 = arr_names(count2, path2);
         char *filename2 = names2[count2-1];
 
-        char* parent_name = names2[count2-2];
-        char* parent_path;
+        
 
         unsigned int parent_inode;
-        parent_path = get_parent_path(count2, path2);
-        char *cur2 = strtok(path2, "/");
-        unsigned int inode2 = traverse(2, cur2, filename2);
+        char *parent_path = get_parent_path(count2, path2);
 
+        char* parent_name;
+        unsigned int inode2;
+        if(count2>=2){
+            parent_name = names2[count2-2];
+            char *cur2 = strtok(path2, "/");
+            inode2 = traverse(2, cur2, filename2);
+        } else{
+            parent_name = "/";
+            inode2 = traverse(2, "/", filename2);
+        }
         if(inode2){
             fprintf(stderr, "%s", exist_err);
             return EEXIST;

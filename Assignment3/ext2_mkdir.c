@@ -68,40 +68,45 @@ int main(int argc, char *argv[]) {
         if (succ){
             // create new block
             allocate(inode, 2, EXT2_S_IFDIR);
-            printf("%s", "yolo1");
         }
     } 
     else {
         dir_name = names[count - 1];
         parent_name = names[count - 2];
         parent_path = get_parent_path(count, path);
-        printf("%s", "yolo");
-        char *cur = strtok(path, "/");
-        char *cur_p = strtok(parent_path, "/");
-        unsigned int parent_inode = traverse(2, cur_p, parent_name);
+        unsigned int parent_inode;
+        
+        if(strcmp(parent_path, "/") == 0){
+            parent_inode = traverse(2, parent_path, parent_name);
+        }
+        else{
+            char *cur_p = strtok(parent_path, "/");
+            parent_inode = traverse(2, cur_p, parent_name);
+        }
+        
         // if last item exists in path
         if(parent_inode){
+            char *cur = strtok(path, "/");
             unsigned int dir_inode = traverse(2, cur, dir_name);
             if (dir_inode){
                 fprintf(stderr, "%s", exist_err);
                 return EEXIST;
             }
             int inode = find_free_inode();
-            int succ = create_link(2, inode, dir_name, EXT2_FT_DIR);
+            int succ = create_link(parent_inode, inode, dir_name, EXT2_FT_DIR);
             if (succ){
                 // create new block
                 allocate(inode, parent_inode, EXT2_S_IFDIR);
-                printf("%s", "yolo1");
             }
         }
-        fprintf(stderr, "%s", dne_err);
-        for (int k = 0; k < count; k++) {
-            free(names[k]);
-        }
-        free(names);
         free(parent_path);
         return ENOENT;
     }
-
+    fprintf(stderr, "%s", dne_err);
+    for (int k = 0; k < count; k++) {
+        free(names[k]);
+    }
+    free(names);
+    
     return 0;
 }

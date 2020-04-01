@@ -75,7 +75,6 @@ void init(char *name) {
     }
 }
 
-
 int count_item_in_path(char* path) {
     char *copy = malloc((strlen(path) + 1) * sizeof(char));
     if (copy == NULL) {
@@ -156,7 +155,6 @@ unsigned int find_free_block(){
         unsigned c = bm[i / 8];                     // get the corresponding byte
         if ((c & (1 << index)) == 0) { 
             bm[i/8] = bm[i/8] | (1 << index);
-            printf("%d %d", (c & (1 << index)) > 0, i+1);
             return i + 1;
         }
         if (++index == 8) (index = 0); // increment shift index, if > 8 reset.
@@ -180,7 +178,6 @@ unsigned int find_free_inode(){
         // inode number = index number + 1
         if ((c & (1 << index2)) == 0 && i > 10) {    // > 10 because first 11 not used
             bmi[i/8] = bmi[i/8] | (1 << index2);
-            printf("%d %d", (c & (1 << index2)) > 0, i+1);
             return i + 1;
         }
         if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
@@ -337,7 +334,6 @@ unsigned int traverse(unsigned int inode, char *cur, char *filename){
                 pos = pos + cur_len;
                 dir = (struct ext2_dir_entry_2 *) pos;
             }while (pos % EXT2_BLOCK_SIZE != 0);
-            
         }
     }
     return 0;
