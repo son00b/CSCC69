@@ -96,8 +96,6 @@ int main(int argc, char *argv[]) {
         char **names2 = arr_names(count2, path2);
         char *filename2 = names2[count2-1];
 
-        
-
         unsigned int parent_inode;
         char *parent_path = get_parent_path(count2, path2);
 

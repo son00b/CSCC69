@@ -155,10 +155,9 @@ int main(int argc, char **argv) {
             char typ = (dir->file_type == EXT2_FT_REG_FILE) ? 'f' : 
                         ((dir->file_type == EXT2_FT_DIR) ? 'd' : 's');
             // Print the current directory entry
-            printf("Inode: %d rec_len: %d name_len: %d file_type: %c name: %.*s\n", 
-                dir->inode, dir->rec_len, dir->name_len, typ, dir->name_len, dir->name);
+            printf("Inode: %d rec_len: %d name_len: %d file_type: %c name: %.*s\n", dir->inode, dir->rec_len, dir->name_len, typ, dir->name_len, dir->name);
             // Update position and index into it
-            
+
             pos = pos + cur_len;
             dir = (struct ext2_dir_entry_2 *) pos;
 
