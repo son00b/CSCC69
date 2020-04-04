@@ -29,6 +29,7 @@ use the ext2 specs and ask on the discussion board.
 
 #include "ext2.h"
 #include "helper.c"
+#include "str_helper.c"
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_ln disk_name path_to_disk1 path_to_disk2 [-s]\n";
@@ -65,6 +66,8 @@ int main(int argc, char *argv[]) {
     char *disk_name = argv[diskindex];
     char *path1 = argv[pathindexA];
     char *path2 = argv[pathindexB];
+    char *path = (char*) malloc((strlen(path2)+1)*sizeof(char));
+    strcpy(path, path2);
 
     int count1 = count_item_in_path(path1);
     int count2 = count_item_in_path(path2);
@@ -105,9 +108,11 @@ int main(int argc, char *argv[]) {
             parent_name = names2[count2-2];
             char *cur2 = strtok(path2, "/");
             inode2 = traverse(2, cur2, filename2);
+            
         } else{
             parent_name = "/";
-            inode2 = traverse(2, "/", filename2);
+            inode2 = traverse(2, filename2, filename2);
+            printf("%d", inode2);
         }
         if(inode2){
             fprintf(stderr, "%s", exist_err);
@@ -118,10 +123,24 @@ int main(int argc, char *argv[]) {
         struct ext2_dir_entry_2 *dir_file = find_dir_entry(inode1, filename1);
         // print the name if it's file or link 
         if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
-            char *cur_p = strtok(parent_path, "/");
-            parent_inode = traverse(2, cur_p, parent_name);
-            create_link(parent_inode, inode1, filename2, EXT2_FT_REG_FILE);
-            allocate(inode1, parent_inode, EXT2_S_IFREG);
+            if (strcmp(parent_name, "/") == 0){
+                parent_inode = 2;
+            } else {
+                char *cur_p = strtok(parent_path, "/");
+                parent_inode = traverse(2, cur_p, parent_name);
+            }
+            if (parent_inode){
+                if (sflag == 0){
+                    create_link(parent_inode, inode1, filename2, EXT2_FT_REG_FILE);
+                    allocate(inode1, parent_inode, EXT2_S_IFREG, NULL);
+                }
+                else {
+                    unsigned int inode = find_free_inode();
+                    create_link(parent_inode, inode, filename2, EXT2_FT_SYMLINK);
+                    allocate(inode, parent_inode, EXT2_S_IFLNK, path);
+                }
+                
+            }
         }
         else{
             fprintf(stderr, "%s", dir_err);
@@ -135,9 +154,10 @@ int main(int argc, char *argv[]) {
         for (int k = 0; k < count2; k++) {
                 free(names2[k]);
         }
+        free(names1);
         free(names2);
         free(parent_path);
-
+        free(path);
     } 
 
     

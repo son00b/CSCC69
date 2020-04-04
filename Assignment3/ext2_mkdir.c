@@ -24,6 +24,7 @@ entry names are not null-terminated, etc.).
 
 #include "ext2.h"
 #include "helper.c"
+#include "str_helper.c"
 
 
 
@@ -67,7 +68,7 @@ int main(int argc, char *argv[]) {
         int succ = create_link(2, inode, dir_name, EXT2_FT_DIR);
         if (succ){
             // create new block
-            allocate(inode, 2, EXT2_S_IFDIR);
+            allocate(inode, 2, EXT2_S_IFDIR, NULL);
         }
     } 
     else {
@@ -96,7 +97,7 @@ int main(int argc, char *argv[]) {
             int succ = create_link(parent_inode, inode, dir_name, EXT2_FT_DIR);
             if (succ){
                 // create new block
-                allocate(inode, parent_inode, EXT2_S_IFDIR);
+                allocate(inode, parent_inode, EXT2_S_IFDIR, NULL);
             }
         }
         free(parent_path);

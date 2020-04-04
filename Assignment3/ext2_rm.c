@@ -38,6 +38,7 @@ and implement the additional functionality in this separate source file.
 
 #include "ext2.h"
 #include "helper.c"
+#include "str_helper.c"
 
 // decrease link count by 1 given inode
 void remove_link(unsigned int inode){

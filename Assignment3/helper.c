@@ -75,74 +75,9 @@ void init(char *name) {
     }
 }
 
-int count_item_in_path(char* path) {
-    char *copy = malloc((strlen(path) + 1) * sizeof(char));
-    if (copy == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-    strcpy(copy, path);
-
-    int count = 0;
-    char *cur = strtok(copy, "/");
-    while (cur != NULL)
-    {
-        count++;
-        cur = strtok(NULL, "/");
-    }
-    free(copy);
-    return count;
-}
-
-char *get_parent_path(int count, char* path) {
-    char *copy = malloc((strlen(path) + 1) * sizeof(char));
-    if (copy == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-    if (count == 1) {
-        strcpy(copy, "/");
-    } else {
-        strcpy(copy, path);
-        // trim / at the end of string if it exists
-        if (strlen(copy) >= 1) {
-            if (copy[strlen(copy) - 1] == '/') {
-                copy[strlen(copy) - 1] = 0;
-            }
-        }
-        // remove anything after the / before the base filename
-        char *final_slash = strrchr(copy, '/');
-        if (final_slash) {
-            *(final_slash) = 0;
-        }
-    }
-    return copy;
-}
-
 int round_up(int n){
     int remainder = n % 4;
     return n + (4 - remainder);
-}
-
-char** arr_names(int count, char* path) {
-    char *copy = malloc((strlen(path) + 1) * sizeof(char));
-    if (copy == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-    strcpy(copy, path);
-
-    char **names = malloc(count *  sizeof(char*));
-    int j = 0;
-    char *token = strtok(copy, "/");
-    while (token != NULL) {
-        names[j] = malloc(EXT2_NAME_LEN * sizeof(char));
-        strcpy(names[j], token);
-        j++;
-        token = strtok(NULL, "/");
-    }
-    free(copy);
-    return names;
 }
 
 unsigned int find_free_block(){
@@ -155,6 +90,7 @@ unsigned int find_free_block(){
         unsigned c = bm[i / 8];                     // get the corresponding byte
         if ((c & (1 << index)) == 0) { 
             bm[i/8] = bm[i/8] | (1 << index);
+            bgd->bg_free_blocks_count--;
             return i + 1;
         }
         if (++index == 8) (index = 0); // increment shift index, if > 8 reset.
@@ -167,7 +103,6 @@ unsigned int find_free_inode(){
     struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
     struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
     char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
-    unsigned int inode = 12;
 
     int index2 = 0;
     for (int i = 0; i < sb->s_inodes_count; i++) {
@@ -178,6 +113,7 @@ unsigned int find_free_inode(){
         // inode number = index number + 1
         if ((c & (1 << index2)) == 0 && i > 10) {    // > 10 because first 11 not used
             bmi[i/8] = bmi[i/8] | (1 << index2);
+            bgd->bg_free_inodes_count--;
             return i + 1;
         }
         if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
@@ -199,8 +135,14 @@ unsigned long find_dir_block_pos(unsigned int inode){
     return 0;
 }
 
+
 int create_link(unsigned int parent_inode, unsigned int inode, char *name, unsigned char mode){
-    int total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(name) + strlen(name) + sizeof(EXT2_FT_REG_FILE));
+    int total_size;
+    if (mode == EXT2_FT_SYMLINK){
+        total_size = strlen(name);
+    } else{
+        total_size = round_up(sizeof(unsigned int) + sizeof(unsigned short) + sizeof(name) + strlen(name) + sizeof(EXT2_FT_REG_FILE));
+    }   
     unsigned long pos = find_dir_block_pos(parent_inode);
     struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
     do {
@@ -216,8 +158,6 @@ int create_link(unsigned int parent_inode, unsigned int inode, char *name, unsig
             dir->name_len = strlen(name);
             dir->rec_len = cur_len - dir_size;
             dir->inode = inode;
-            // set link count;
-            
             return 1;
         }
         pos = pos + cur_len;
@@ -226,14 +166,23 @@ int create_link(unsigned int parent_inode, unsigned int inode, char *name, unsig
     return 0;
 }
 
-void allocate (unsigned int inode, unsigned int parent_inode, unsigned short mode) {
+void allocate (unsigned int inode, unsigned int parent_inode, unsigned short mode, char* path) {
     struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
     struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
     struct ext2_inode *new = in + (inode - 1);
     new->i_mode = mode;
-    new->i_links_count++;
-    if (S_ISDIR(mode)){
+    if (S_ISREG(mode)){
         new->i_links_count++;
+    }
+    else if (S_ISLNK(mode)){
+        unsigned int blocknum = find_free_block();
+        char *block = (char*) disk + (EXT2_BLOCK_SIZE * blocknum);
+        strcpy(block, path);
+        new->i_block[0] = blocknum;
+        new->i_size = strlen(path);
+    }
+    else if (S_ISDIR(mode)){
+        new->i_links_count = 2;
         new->i_blocks = 2;
         new->i_size = EXT2_BLOCK_SIZE;
         unsigned int block = find_free_block();
@@ -328,6 +277,7 @@ unsigned int traverse(unsigned int inode, char *cur, char *filename){
                     }else{
                         cur = strtok(NULL, "/");
                         return traverse(dir->inode, cur, filename);
+                        
                     }
                 }
                 // Update position and index into it

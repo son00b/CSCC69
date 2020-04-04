@@ -31,6 +31,7 @@ and refrain from printing the . and ..
 
 #include "ext2.h"
 #include "helper.c"
+#include "str_helper.c"
 
 // print everything in a directory block
 void ls_block(unsigned int inode, int aflag){
