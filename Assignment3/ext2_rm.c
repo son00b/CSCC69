@@ -42,42 +42,6 @@ and implement the additional functionality in this separate source file.
 #include "helper.c"
 #include "str_helper.c"
 
-// decrease link count by 1 given inode
-void remove_link(unsigned int inode){
-
-    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
-    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
-    // Go through all the used inodes stored in the array above
-    // Remember array stores the index
-    struct ext2_inode* curr = in + inode - 1;
-    if (curr->i_links_count > 0) {
-        curr->i_links_count = curr->i_links_count - 1;
-        if (curr->i_links_count == 0){
-            // remove bitmap
-            struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
-            struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
-            char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
-
-            int index2 = 0;
-            for (int i = 0; i < sb->s_inodes_count; i++) {
-                unsigned c = bmi[i / 8];                     // get the corresponding byte
-                // If that bit was a 1, inode is used, store it into the array.
-                // Note, this is the index number, NOT the inode number
-                // inode number = index number + 1
-                if ((c & (1 << index2)) != 0 && inum[i] == inode - 1) {    // > 10 because first 11 not used
-                    bmi[i/8] = bmi[i/8] & (~(1 << index2));
-                    bgd->bg_free_inodes_count++;
-                    curr = NULL;
-                    return;
-                }
-                if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
-            }
-        }
-    }
-    curr->i_dtime = (unsigned int)time(NULL);
-
-}
-
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_rm disk_name path_to_file\n";
     if (argc != 3) {

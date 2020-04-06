@@ -42,55 +42,104 @@ and implement the additional functionality in this separate source file.
 #include "helper.c"
 #include "str_helper.c"
 
-// decrease link count by 1 given inode
-void remove_link(unsigned int inode){
+int rflag = 0; // 1 when "-r" is provided; 0 when "-r" not provided.
 
+int remove_r(unsigned int inode, char *filename){
+    int result = 0;
     struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
     struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
-    // Go through all the used inodes stored in the array above
-    // Remember array stores the index
-    struct ext2_inode* curr = in + inode - 1;
-    if (curr->i_links_count > 0) {
-        curr->i_links_count = curr->i_links_count - 1;
-        if (curr->i_links_count == 0){
-            // remove bitmap
-            struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
-            struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
-            char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
-
-            int index2 = 0;
-            for (int i = 0; i < sb->s_inodes_count; i++) {
-                unsigned c = bmi[i / 8];                     // get the corresponding byte
-                // If that bit was a 1, inode is used, store it into the array.
-                // Note, this is the index number, NOT the inode number
-                // inode number = index number + 1
-                if ((c & (1 << index2)) != 0 && inum[i] == inode - 1) {    // > 10 because first 11 not used
-                    bmi[i/8] = bmi[i/8] & (~(1 << index2));
-                    bgd->bg_free_inodes_count++;
-                    curr = NULL;
-                    return;
-                }
-                if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
-            }
+    struct ext2_inode *new = in + (inode - 1);
+    struct ext2_dir_entry_2 *dir_file = find_dir_entry(inode, filename);
+    printf("%lu", inode);
+    // remove if it's file or link 
+    // printf("%d", dir_file->file_type == EXT2_FT_REG_FILE);
+    // char type = (S_ISDIR(new->i_mode)) ? 'd' : ((S_ISREG(new->i_mode)) ? 'f' : 's');
+    //     printf("[%d] type: %c size: %d links: %d blocks: %d\n", inode - 1, type, \
+    //         new->i_size, new->i_links_count, new->i_blocks);     // Print Inode info
+        
+    if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
+        unsigned long pre_pos = find_pre_pos(inode, filename);
+        if (pre_pos){
+            struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
+            pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
         }
+        dir_file->inode = 0;
+        remove_link(inode);
+        return 1;
+    } else if (dir_file->file_type == EXT2_FT_DIR && rflag == 1){
+        
+        int index = 0;
+        while (index < new->i_blocks){
+            int blocknum = new->i_block[index];
+            
+            unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
+            unsigned long first = pos;
+            struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
+            do {
+                // Get the length of the current block and type
+                int cur_len = dir->rec_len;
+                // if file is regula file, link, or directory then print
+                if (dir->file_type == EXT2_FT_REG_FILE || dir->file_type == EXT2_FT_SYMLINK || dir->file_type == EXT2_FT_DIR){
+                    if (strncmp(dir->name, ".", dir->name_len) != 0 && strncmp(dir->name, "..", dir->name_len) != 0){
+                        if(index == 0 || result == 1){
+                            // printf("\n inode  %u %s \n", dir->inode, dir->name);
+                            char *name = (char*) malloc((dir->name_len + 1)*sizeof(char));
+                            strncpy(name, dir->name, dir->name_len);
+                            result = remove_r(dir->inode, name);
+                            free(name);
+                        }
+                    }
+                }
+                // Update position and index into it
+                pos = pos + cur_len;
+                dir = (struct ext2_dir_entry_2 *) pos;
+                // Last directory entry leads to the end of block. Check if 
+                // Position is multiple of block size, means we have reached the end
+            } while (pos % EXT2_BLOCK_SIZE != 0);
+            index++;
+        }
+    } else if (dir_file->file_type == EXT2_FT_DIR && rflag == 0){
+        return EISDIR;
     }
-    curr->i_dtime = (unsigned int)time(NULL);
-
+    printf("%d\n", result);
+    return result;
 }
 
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_rm_bonus disk_name path_to_file [-r]\n";
-    if (argc != 3) {
+    if (argc != 3 && argc != 4) {
         fprintf(stderr, "%s", err_message);
         exit(1);
     }
 
     
+    int diskindex = 1;
+    int pathindex = 2;
+    if (argc == 4) {
+        int i;
+        for (i = 1; i < argc; i++) {
+            if (strncmp(argv[i], "-r", strlen("-a")) == 0) {
+                if (i == 1) {
+                    fprintf(stderr, "%s", "-r should be after the disk image argument \n");
+                    exit(1);
+                } else if (i == 2) {
+                    pathindex = 3;
+                }
+                rflag = 1;
+            }
+        }
+        // if there are 3 command line argument, "-r" should be provided.
+        if (rflag == 0) {
+            fprintf(stderr, "-r should be provided.");
+            exit(1);
+        }
+    }
+
     
     // name of disk
-    char *disk_name = argv[1];
+    char *disk_name = argv[diskindex];
     // path of file in disk
-    char *path = argv[2];
+    char *path = argv[pathindex];
     // the disk
     init(disk_name);
 
@@ -111,22 +160,14 @@ int main(int argc, char *argv[]) {
             unsigned int file_inode = traverse(2, cur, filename);
             // if last item exists, return 0 otherwise return enoent
             if(file_inode){
-                // get the item as directory entry
-                struct ext2_dir_entry_2 *dir_file = find_dir_entry(file_inode, filename);
-                // remove if it's file or link 
-                if (dir_file->file_type == EXT2_FT_SYMLINK || dir_file->file_type == EXT2_FT_REG_FILE){
-                    unsigned long pre_pos = find_pre_pos(file_inode, filename);
-                    if (pre_pos){
-                        struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
-                        pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
-                    }
-                    dir_file->inode = 0;
-                    remove_link(file_inode);
+                int result = remove_r(file_inode, filename);
+                if (result == EISDIR) {
+                    // path cannot be directory
+                    fprintf(stderr, "%s", dir_err);
+                    return EISDIR;
+                } else if (result == 1) {
                     return 0;
                 }
-                // path cannot be directory
-                fprintf(stderr, "%s", dir_err);
-                return EISDIR;
             }
         }
         fprintf(stderr, "%s", dne_err);
