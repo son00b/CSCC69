@@ -29,6 +29,35 @@ while setting other information in the inodes may be important (e.g., i_dtime).
 #include "helper.c"
 #include "str_helper.c"
 
+void copy(unsigned int inode, unsigned int parent_inode, char* filepath){
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
+    struct ext2_inode *new = in + (inode - 1);
+    int index = 0;
+    FILE *file  = fopen(filepath, "r");
+    char buffer[EXT2_BLOCK_SIZE];
+    unsigned int blocknum;
+    int size = fread(buffer,1,EXT2_BLOCK_SIZE, file);
+    while (size > 0 && index <= 11) {
+        blocknum = find_free_block();
+        char *block = (char*) disk + (EXT2_BLOCK_SIZE * blocknum);
+        new->i_block[index] = blocknum;
+        new->i_blocks++;
+        index++;
+        strcpy(block, buffer);
+        size = fread(buffer,1,EXT2_BLOCK_SIZE, file);
+    }
+    if (index <= 11){
+        blocknum = find_free_block();
+        char *block = (char*) disk + (EXT2_BLOCK_SIZE * blocknum);
+        new->i_block[index] = blocknum;
+        new->i_blocks++;
+        index++;
+        strncpy(block, buffer, size);
+    }
+    new->i_size = strlen(filepath);
+}
+
 int main(int argc, char *argv[]) {
     char *err_message = "USAGE: ./ext2_cp disk_name path_to_file path_to_disk\n";
     if (argc != 4) {
@@ -66,8 +95,9 @@ int main(int argc, char *argv[]) {
         char **names1 = arr_names(count1, path1);
         char **names2 = arr_names(count2, path2);
         char *filename = names1[count1-1];
-        char *path = (char*) malloc((strlen(path2) + strlen(filename) + 1)*sizeof(char));
+        char *path = (char*) malloc((strlen(path2) + strlen(filename) + 2)*sizeof(char));
         strcpy(path, path2);
+        strcat(path, "/");
         strcat(path, filename);
         unsigned int parent_inode;
         char* parent_name;
@@ -101,13 +131,11 @@ int main(int argc, char *argv[]) {
         // // print the name if it's file or link 
         
         int inode = find_free_inode();
-        int succ = create_link(2, inode, filename, s.st_mode);
+        int succ = create_link(parent_inode, inode, filename, EXT2_FT_REG_FILE);
         if (succ){
             // create new block
-            allocate(inode, 2, s.st_mode, NULL);
+            allocate(inode, 2, EXT2_S_IFREG, NULL);
         }
-
-
         // freeing
         for (int k = 0; k < count2; k++) {
                 free(names2[k]);
