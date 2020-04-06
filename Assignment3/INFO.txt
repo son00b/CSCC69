@@ -1,11 +1,5 @@
-Name: Aditi Damle
-Utorid: damlead1
-
 Name: Heng Liu
 Utorid: liuheng7
-
-Name: Ya-Tzu Wang
-Utorid: wangyatz
 
 -- delete below later, from course handout:
 

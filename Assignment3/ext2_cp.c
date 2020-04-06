@@ -35,10 +35,12 @@ void copy(unsigned int inode, unsigned int parent_inode, char* filepath){
     struct ext2_inode *new = in + (inode - 1);
     int index = 0;
     FILE *file  = fopen(filepath, "r");
-    char buffer[EXT2_BLOCK_SIZE];
+    char buffer [EXT2_BLOCK_SIZE];
     unsigned int blocknum;
+    int total_size = 0;
     int size = fread(buffer,1,EXT2_BLOCK_SIZE, file);
     while (size > 0 && index <= 11) {
+        total_size += size;
         blocknum = find_free_block();
         char *block = (char*) disk + (EXT2_BLOCK_SIZE * blocknum);
         new->i_block[index] = blocknum;
@@ -48,6 +50,7 @@ void copy(unsigned int inode, unsigned int parent_inode, char* filepath){
         size = fread(buffer,1,EXT2_BLOCK_SIZE, file);
     }
     if (index <= 11){
+        total_size += size;
         blocknum = find_free_block();
         char *block = (char*) disk + (EXT2_BLOCK_SIZE * blocknum);
         new->i_block[index] = blocknum;
@@ -55,7 +58,7 @@ void copy(unsigned int inode, unsigned int parent_inode, char* filepath){
         index++;
         strncpy(block, buffer, size);
     }
-    new->i_size = strlen(filepath);
+    new->i_size = total_size;
 }
 
 int main(int argc, char *argv[]) {
@@ -135,6 +138,7 @@ int main(int argc, char *argv[]) {
         if (succ){
             // create new block
             allocate(inode, 2, EXT2_S_IFREG, NULL);
+            copy(inode, parent_inode, path1);
         }
         // freeing
         for (int k = 0; k < count2; k++) {
