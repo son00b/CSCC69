@@ -63,35 +63,32 @@ int main(int argc, char *argv[]) {
             return ENOENT;
         }
 
-        char **names1 = arr_names(count2, path1);
+        char **names1 = arr_names(count1, path1);
         char **names2 = arr_names(count2, path2);
         char *filename = names1[count1-1];
-
+        char *path = (char*) malloc((strlen(path2) + strlen(filename) + 1)*sizeof(char));
+        strcpy(path, path2);
+        strcat(path, filename);
         unsigned int parent_inode;
-        char *parent_path = get_parent_path(count2, path2);
-
         char* parent_name;
         unsigned int inode2;
+        char *cur = strtok(path, "/");
+        inode2 = traverse(2, cur, filename);
         if (count2 == 0){
             parent_inode = 2;
-            inode2 = traverse(2, "/", filename);
+            parent_name = "/";
         }
         else if(count2 == 1){
-            parent_name = "/";
-            char *cur2 = strtok(path2, "/");
-            inode2 = traverse(2, cur2, filename);
-            char *cur_p = strtok(parent_path, "/");
+            parent_name = names2[count2-1];
+            char *cur_p = strtok(path2, "/");
             parent_inode = traverse(2, cur_p, parent_name);
         } else{
-            parent_name = names2[count2-2];
-            char *cur2 = strtok(path2, "/");
-            inode2 = traverse(2, cur2, filename);
-            char *cur_p = strtok(parent_path, "/");
+            parent_name = names2[count2-1];
+            char *cur_p = strtok(path2, "/");
             parent_inode = traverse(2, cur_p, parent_name);
         }
 
         if(inode2){
-            printf("%s", "asd");
             fprintf(stderr, "%s", exist_err);
             return EEXIST;
         }
@@ -101,7 +98,7 @@ int main(int argc, char *argv[]) {
             return ENOENT;
         }
 
-        // print the name if it's file or link 
+        // // print the name if it's file or link 
         
         int inode = find_free_inode();
         int succ = create_link(2, inode, filename, s.st_mode);
@@ -109,16 +106,14 @@ int main(int argc, char *argv[]) {
             // create new block
             allocate(inode, 2, s.st_mode, NULL);
         }
-        // create_link(parent_inode, inode1, filename2, EXT2_FT_REG_FILE);
-        // allocate(inode1, parent_inode, EXT2_S_IFREG);
 
 
         // freeing
-        // for (int k = 0; k < count2; k++) {
-        //         free(names2[k]);
-        // }
-        // free(names2);
-        // free(parent_path);
+        for (int k = 0; k < count2; k++) {
+                free(names2[k]);
+        }
+        free(names2);
+        free(path);
 
     } 
 
