@@ -170,6 +170,7 @@ void remove_link(unsigned int inode){
         int index = 0;
         while (index < 12){
             int blocknum = curr->i_block[index];
+            index++;
         }
     }
     curr->i_dtime = (unsigned int)time(NULL);

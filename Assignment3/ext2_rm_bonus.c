@@ -71,9 +71,7 @@ int remove_r(unsigned int inode, char *filename){
         int index = 0;
         while (index < new->i_blocks){
             int blocknum = new->i_block[index];
-            
             unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
-            unsigned long first = pos;
             struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
             do {
                 // Get the length of the current block and type
@@ -90,6 +88,7 @@ int remove_r(unsigned int inode, char *filename){
                         }
                     }
                 }
+                printf("%d ", pos);
                 // Update position and index into it
                 pos = pos + cur_len;
                 dir = (struct ext2_dir_entry_2 *) pos;
@@ -98,6 +97,13 @@ int remove_r(unsigned int inode, char *filename){
             } while (pos % EXT2_BLOCK_SIZE != 0);
             index++;
         }
+        unsigned long pre_pos = find_pre_pos(inode, filename);
+        if (pre_pos){
+            struct ext2_dir_entry_2 *pre_dir = (struct ext2_dir_entry_2 *) pre_pos;
+            pre_dir->rec_len = pre_dir->rec_len + dir_file->rec_len;
+        }
+        dir_file->inode = 0;
+        remove_link(inode);
     } else if (dir_file->file_type == EXT2_FT_DIR && rflag == 0){
         return EISDIR;
     }
