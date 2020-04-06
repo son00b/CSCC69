@@ -51,6 +51,32 @@ void remove_link(unsigned int inode){
         int inodenum = inum[i] + 1;
         if (inodenum == inode){
             curr->i_links_count = curr->i_links_count - 1;
+            if (curr->i_links_count == 0){
+                // remove bitmap
+                struct ext2_super_block *sb = (struct ext2_super_block *)(disk + 1024);
+                struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+                char *bmi = (char *) (disk + (bgd->bg_inode_bitmap * EXT2_BLOCK_SIZE));
+
+                int index2 = 0;
+                for (int i = 0; i < sb->s_inodes_count; i++) {
+                    unsigned c = bmi[i / 8];                     // get the corresponding byte
+                        // Print the correcponding bit
+                    // If that bit was a 1, inode is used, store it into the array.
+                    // Note, this is the index number, NOT the inode number
+                    // inode number = index number + 1
+                    printf("%u %d \n", (c & (1 << index2)), inodenum - 1);
+                    if ((c & (1 << index2)) != 0 && inum[i] == inodenum - 1) {    // > 10 because first 11 not used
+                        printf("%s", "asd");
+                        bmi[i/8] = bmi[i/8] & (~(1 << index2));
+                        printf("%u", bmi[i/8]);
+                        bgd->bg_free_inodes_count++;
+                        
+                        curr = NULL;
+                        return;
+                    }
+                    if (++index2 == 8) (index2 = 0); // increment shift index, if > 8 reset.
+                }
+            }
         }
     }
 }

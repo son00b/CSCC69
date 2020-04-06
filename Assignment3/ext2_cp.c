@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         // check if path1 exists
         struct stat s;
         int exist = stat(path1, &s);
-        if(!exist){
+        if(exist){
             fprintf(stderr, "%s", dne_err);
             return ENOENT;
         }
@@ -73,13 +73,15 @@ int main(int argc, char *argv[]) {
         char* parent_name;
         unsigned int inode2;
         if (count2 == 0){
-            inode2 = 2;
             parent_inode = 2;
+            inode2 = traverse(2, "/", filename);
         }
         else if(count2 == 1){
             parent_name = "/";
-            inode2 = traverse(2, "/", filename);
-            parent_inode = 2;
+            char *cur2 = strtok(path2, "/");
+            inode2 = traverse(2, cur2, filename);
+            char *cur_p = strtok(parent_path, "/");
+            parent_inode = traverse(2, cur_p, parent_name);
         } else{
             parent_name = names2[count2-2];
             char *cur2 = strtok(path2, "/");
@@ -89,13 +91,14 @@ int main(int argc, char *argv[]) {
         }
 
         if(inode2){
+            printf("%s", "asd");
             fprintf(stderr, "%s", exist_err);
             return EEXIST;
         }
 
         if (!parent_inode){
             fprintf(stderr, "%s", dne_err);
-            return EEXIST;
+            return ENOENT;
         }
 
         // print the name if it's file or link 
@@ -104,7 +107,7 @@ int main(int argc, char *argv[]) {
         int succ = create_link(2, inode, filename, s.st_mode);
         if (succ){
             // create new block
-            // allocate(inode, 2, s.st_mode);
+            allocate(inode, 2, s.st_mode, NULL);
         }
         // create_link(parent_inode, inode1, filename2, EXT2_FT_REG_FILE);
         // allocate(inode1, parent_inode, EXT2_S_IFREG);
