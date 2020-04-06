@@ -141,9 +141,13 @@ int main(int argc, char *argv[]) {
             copy(inode, parent_inode, path1);
         }
         // freeing
+        for (int k = 0; k < count1; k++) {
+                free(names1[k]);
+        }
         for (int k = 0; k < count2; k++) {
                 free(names2[k]);
         }
+        free(names1);
         free(names2);
         free(path);
 

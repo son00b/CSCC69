@@ -35,14 +35,16 @@ and refrain from printing the . and ..
 
 // print everything in a directory block
 void ls_block(unsigned int inode, int aflag){
-    for (int i = 0; i < dirsin; i++) {
-        // Get the block number
-        int blocknum = dirs[i];
-        // Get the position in bytes and index to block
+    struct ext2_group_desc *bgd = (struct ext2_group_desc *) (disk + 2048);
+    struct ext2_inode* in = (struct ext2_inode*) (disk + bgd->bg_inode_table * EXT2_BLOCK_SIZE);
+    struct ext2_inode *new = in + (inode - 1);
+    int index = 0;
+    while (index < new->i_blocks){
+        int blocknum = new->i_block[index];
+        index++;
         unsigned long pos = (unsigned long) disk + blocknum * EXT2_BLOCK_SIZE;
         struct ext2_dir_entry_2 *dir = (struct ext2_dir_entry_2 *) pos;
-        if (inode == dir->inode && strcmp(dir->name, ".") == 0){
-            do {
+        do {
             // Get the length of the current block and type
             int cur_len = dir->rec_len;
             // if file is regula file, link, or directory then print
@@ -58,7 +60,6 @@ void ls_block(unsigned int inode, int aflag){
             // Last directory entry leads to the end of block. Check if 
             // Position is multiple of block size, means we have reached the end
             } while (pos % EXT2_BLOCK_SIZE != 0);
-        }
     }
 }
 
@@ -98,6 +99,8 @@ int main(int argc, char *argv[]) {
     // path of file in disk
     char path[strlen(argv[pathindex])];
     strcpy(path, argv[pathindex]);
+    int count = count_item_in_path(path);
+    char **names = arr_names(count, path);
     // the disk
     init(disk_name);
     // if given path is root directory
@@ -107,7 +110,7 @@ int main(int argc, char *argv[]) {
     // if the given path isn't root
     else{
         // get the file name
-        char *filename = basename(path);
+        char *filename = names[count-1];
         // skip root directory
         char *cur = strtok(path, "/");
         
@@ -129,6 +132,11 @@ int main(int argc, char *argv[]) {
                 return 0;
             }
         }
+        for (int k = 0; k < count; k++) {
+                free(names[k]);
+        }
+        free(names);
+    
         fprintf(stderr, "%s", dne_err);
         return ENOENT;
     }

@@ -112,7 +112,6 @@ int main(int argc, char *argv[]) {
         } else{
             parent_name = "/";
             inode2 = traverse(2, filename2, filename2);
-            printf("%d", inode2);
         }
         if(inode2){
             fprintf(stderr, "%s", exist_err);

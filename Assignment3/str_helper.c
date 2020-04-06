@@ -44,7 +44,6 @@ char *get_parent_path(int count, char* path) {
 }
 
 
-
 char** arr_names(int count, char* path) {
     char *copy = malloc((strlen(path) + 1) * sizeof(char));
     if (copy == NULL) {
